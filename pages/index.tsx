@@ -59,8 +59,30 @@ export default function Home() {
   const availableChords = useMemo(() => CHORDS.filter(chord => chordFilters[chord.type]), [chordFilters]);
   const availableTextCategories = useMemo(() => Object.keys(textFilters).filter(key => textFilters[key as TextCategory]) as TextCategory[], [textFilters]);
   
-  useEffect(() => { /* Audio initialization... unchanged */
-    const initAudio = async () => { const context = new (window.AudioContext || (window as any).webkitAudioContext)(); contextRef.current = context; const allFiles = new Set<string>(["drumgroove_135.wav"]); CHORDS.forEach(c => { allFiles.add(c.audioFile); if (c.bassFile) allFiles.add(c.bassFile); }); await Promise.all( Array.from(allFiles).map(async file => { try { const response = await fetch(`/sounds/${file}`); if (!response.ok) throw new Error(`Failed to load ${file}`); const arrayBuffer = await response.arrayBuffer(); bufferRefs.current[file] = await context.decodeAudioData(arrayBuffer); } catch(e) { console.error(e); setCustomText(`Error: Could not load sound /sounds/${file}`); } }) ); if (context.state === 'running') context.suspend(); }; initAudio();
+  useEffect(() => {
+    if (typeof window === "undefined") return; // Prevents running on server
+    // Audio initialization... unchanged
+    const initAudio = async () => { 
+      const context = new (window.AudioContext || (window as any).webkitAudioContext)(); 
+      contextRef.current = context; 
+      const allFiles = new Set<string>(["drumgroove_135.wav"]); 
+      CHORDS.forEach(c => { allFiles.add(c.audioFile); if (c.bassFile) allFiles.add(c.bassFile); }); 
+      await Promise.all( 
+        Array.from(allFiles).map(async file => { 
+          try { 
+            const response = await fetch(`/sounds/${file}`); 
+            if (!response.ok) throw new Error(`Failed to load ${file}`); 
+            const arrayBuffer = await response.arrayBuffer(); 
+            bufferRefs.current[file] = await context.decodeAudioData(arrayBuffer); 
+          } catch(e) { 
+            console.error(e); 
+            setCustomText(`Error: Could not load sound /sounds/${file}`); 
+          } 
+        }) 
+      ); 
+      if (context.state === 'running') context.suspend(); 
+    }; 
+    initAudio();
   }, []);
 
   const stopAllAudio = () => { /* (Unchanged) */ currentSources.current.forEach(src => { try { src.stop(); } catch (e) {} }); currentSources.current = []; };
