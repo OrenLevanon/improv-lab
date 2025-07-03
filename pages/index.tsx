@@ -76,8 +76,7 @@ export default function Home() {
             if (!response.ok) throw new Error(`Failed to load ${file}`);
             const arrayBuffer = await response.arrayBuffer();
             bufferRefs.current[file] = await context.decodeAudioData(arrayBuffer);
-          } catch {
-            // Fix for no-unused-vars: remove unused 'e'
+          } catch (e) {
             setCustomText(`Error: Could not load sound /sounds/${file}`);
           }
         })
@@ -87,8 +86,8 @@ export default function Home() {
     initAudio();
   }, []);
 
-  const stopAllAudio = () => { /* (Unchanged) */ currentSources.current.forEach(src => { try { src.stop(); } catch (e) {} }); currentSources.current = []; };
-  const playChord = (chord: Chord, text: string) => { /* (Unchanged) */ const context = contextRef.current; if (!context) return; stopAllAudio(); ["drumgroove_135.wav", chord.audioFile, chord.bassFile].forEach(file => { if (file && bufferRefs.current[file]) { const src = context.createBufferSource(); src.buffer = bufferRefs.current[file]; src.loop = true; src.connect(context.destination); src.start(); currentSources.current.push(src); } }); setCurrentChord(chord); setCustomText(text); setNextText("..."); lastPlayedRef.current = { chordName: chord.name, text }; };
+  const stopAllAudio = () => { /* (Unchanged) */ currentSources.current.forEach(src => { try { src.stop(); } catch { } }); currentSources.current = []; };
+  const playChord = useCallback((chord: Chord, text: string) => { /* (Unchanged) */ const context = contextRef.current; if (!context) return; stopAllAudio(); ["drumgroove_135.wav", chord.audioFile, chord.bassFile].forEach(file => { if (file && bufferRefs.current[file]) { const src = context.createBufferSource(); src.buffer = bufferRefs.current[file]; src.loop = true; src.connect(context.destination); src.start(); currentSources.current.push(src); } }); setCurrentChord(chord); setCustomText(text); setNextText("..."); lastPlayedRef.current = { chordName: chord.name, text }; }, []);
   const getRandomFilteredText = useCallback((chord: Chord): string | null => { /* (Unchanged) */ const possibleTexts = availableTextCategories.flatMap(cat => chord.texts[cat] || []); if (possibleTexts.length === 0) return null; return possibleTexts[Math.floor(Math.random() * possibleTexts.length)]; }, [availableTextCategories]);
   const scheduleNextLoop = useCallback(() => { /* (Unchanged) */ if (availableChords.length === 0 || availableTextCategories.length === 0) { setNextText("Change filters to continue."); return; } let upcomingChord: Chord, previewText: string | null, attempts = 0; do { upcomingChord = availableChords[Math.floor(Math.random() * availableChords.length)]; previewText = getRandomFilteredText(upcomingChord); attempts++; } while ( previewText && lastPlayedRef.current && upcomingChord.name === lastPlayedRef.current.chordName && previewText === lastPlayedRef.current.text && attempts < 20 ); if (!previewText) { setNextText("No outlines for selected filters."); return; } const interval = barsPerChord * BEAT_INTERVAL_SEC * 4 * 1000; const previewTimeout = setTimeout(() => { setNextText(`${upcomingChord.name}: ${previewText}`); }, interval - PREVIEW_OFFSET_MS); loopTimeout.current = setTimeout(() => { clearTimeout(previewTimeout); playChord(upcomingChord, previewText as string); scheduleNextLoop(); }, interval); }, [availableChords, availableTextCategories, barsPerChord, getRandomFilteredText, playChord]);
   const startPlayback = () => { /* (Unchanged) */ const context = contextRef.current; if (isPlaying || !context) return; if (availableChords.length === 0) { alert("Please select at least one Chord Type."); return; } if (availableTextCategories.length === 0) { alert("Please select at least one Outline type."); return; } context.resume(); setIsPlaying(true); const firstChord = availableChords[Math.floor(Math.random() * availableChords.length)]; const firstText = getRandomFilteredText(firstChord); if (!firstText) { setCustomText("No outlines available for your selection."); stopPlayback(); return; } playChord(firstChord, firstText); scheduleNextLoop(); };
