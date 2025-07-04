@@ -77,6 +77,7 @@ export default function Home() {
             const arrayBuffer = await response.arrayBuffer();
             bufferRefs.current[file] = await context.decodeAudioData(arrayBuffer);
           } catch (e) {
+            console.error(e);
             setCustomText(`Error: Could not load sound /sounds/${file}`);
           }
         })
