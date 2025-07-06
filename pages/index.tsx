@@ -376,7 +376,7 @@ function EmailSignupInline() {
         setError(data.error || 'Something went wrong.');
         setStatus('error');
       }
-    } catch (err) {
+    } catch {
       setError('Network error.');
       setStatus('error');
     }

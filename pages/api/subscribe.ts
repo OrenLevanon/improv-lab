@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     emails.push(email);
     fs.writeFileSync(EMAILS_FILE, JSON.stringify(emails, null, 2), 'utf-8');
     return res.status(200).json({ message: 'Subscribed successfully' });
-  } catch (err) {
+  } catch {
     return res.status(500).json({ error: 'Failed to save email' });
   }
 }
