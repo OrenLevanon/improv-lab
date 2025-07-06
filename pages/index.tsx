@@ -126,11 +126,12 @@ export default function Home() {
       `}</style>
       <div style={styles.container}>
         <header style={styles.header}>
-            <h1 style={styles.headerTitle}>Improv Lab</h1><p style={styles.headerSubtitle}>By Oren Levanon</p>
+            <h1 style={styles.headerTitle}>Improv Lab Ver 1.0</h1>
+            <p style={styles.headerSubtitle}>A practice tool to expand your harmonic vocabulary.</p>
         </header>
         <main className="mainContent-responsive" style={styles.mainContent}>
           {/* === INFO SECTION === */}
-          <div className="infoCard-responsive" style={styles.infoCard}>
+          <div className="infoCard-responsive" style={{...styles.infoCard, ...styles.equalHeightCard}}>
             <h2 style={styles.infoTitle}>Info</h2>
             <div style={styles.accordionGroup}>
               <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, how: !o.how}))}>
@@ -149,12 +150,12 @@ export default function Home() {
           </div>
           {/* === END INFO SECTION === */}
           {/* Main display and controls */}
-          <div className="displayCard-responsive" style={{...styles.card, ...styles.displayCard}}>
+          <div className="displayCard-responsive" style={{...styles.card, ...styles.displayCard, ...styles.equalHeightCard}}>
                 <div style={styles.chordDisplay}><p style={styles.chordLabel}>Current Chord</p><p style={styles.chordName}>{currentChord?.name || "—"}</p></div>
                 <div style={styles.outlineDisplay}><p style={styles.outlineLabel}>Outline</p><p style={styles.outlineText}>{customText}</p></div>
                 <div style={styles.nextUpDisplay}><p style={styles.nextUpText}>Next: {nextText || "—"}</p></div>
             </div>
-            <div className="controlsCard-responsive" style={{...styles.card, ...styles.controlsCard}}>
+            <div className="controlsCard-responsive" style={{...styles.card, ...styles.controlsCard, ...styles.equalHeightCard}}>
                 <h2 style={styles.settingsTitle}>Settings</h2>
                 <div style={styles.settingGroup}>
                     <label style={styles.label}>Change Chord Every</label>
@@ -183,7 +184,13 @@ export default function Home() {
                 </button>
             </div>
         </main>
-        <footer style={styles.footer}><p style={styles.infoText}>A practice tool to expand your harmonic vocabulary.</p></footer>
+        {/* === EMAIL SIGNUP FORM === */}
+        <EmailSignupInline />
+        {/* === END EMAIL SIGNUP FORM === */}
+        <footer style={styles.footer}><p style={styles.infoText}>©
+2025 Oren
+Levanon / Improv
+Lab. All rights reserved.</p></footer>
       </div>
     </>
   );
@@ -203,7 +210,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'flex-start',
+    alignItems: 'stretch', // Ensure alignItems is set to stretch
     gap: '32px',
     padding: '40px 0',
     width: '100%',
@@ -223,29 +230,24 @@ const styles: Record<string, React.CSSProperties> = {
     infoCard: {
       marginRight: 0,
       marginLeft: 0,
-      maxWidth: '100%',
       width: '100%',
     },
     displayCard: {
       margin: '0',
-      maxWidth: '100%',
       width: '100%',
     },
     controlsCard: {
       margin: '0',
-      maxWidth: '100%',
       width: '100%',
       position: 'static',
     },
   },
   card: { backgroundColor: colors.cardBg, borderRadius: '16px', padding: '30px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', border: `1px solid ${colors.border}` },
   displayCard: {
-    flex: '2 1 600px',
+    flex: '1 1 0',
     display: 'flex',
     flexDirection: 'column',
     gap: '25px',
-    minWidth: 350,
-    maxWidth: 700,
     margin: '0 12px',
     backgroundColor: colors.cardBg,
     borderRadius: '16px',
@@ -254,18 +256,17 @@ const styles: Record<string, React.CSSProperties> = {
     border: `1px solid ${colors.border}`,
   },
   controlsCard: {
-    flex: '0 1 300px',
+    flex: '1 1 0',
     position: 'sticky',
     top: '40px',
-    minWidth: 220,
-    maxWidth: 320,
     backgroundColor: colors.cardBg,
     borderRadius: '16px',
     padding: '30px',
     boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
     border: `1px solid ${colors.border}`,
-    alignSelf: 'flex-start',
     color: colors.text,
+    display: 'flex',
+    flexDirection: 'column',
   },
   chordDisplay: { textAlign: 'center' },
   chordLabel: { margin: 0, color: colors.textMuted, fontSize: '1rem' },
@@ -292,16 +293,15 @@ const styles: Record<string, React.CSSProperties> = {
   checkbox: { width: '18px', height: '18px', border: `2px solid ${colors.primaryAccent}`, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.darkBg, fontWeight: 'bold', transition: 'all 0.2s ease' },
   // === INFO SECTION STYLES ===
   infoCard: {
-    flex: '0 1 300px',
+    flex: '1 1 0',
     backgroundColor: colors.cardBg, // match Settings
     borderRadius: '16px',
     padding: '30px', // match Settings
     border: `1px solid ${colors.border}`,
-    minWidth: 220,
-    maxWidth: 320,
     boxShadow: '0 10px 30px rgba(0,0,0,0.2)', // match Settings
-    alignSelf: 'flex-start',
     color: '#fff',
+    display: 'flex',
+    flexDirection: 'column',
   },
   infoTitle: {
     margin: '0 0 25px 0',
@@ -344,4 +344,105 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'inherit',
     margin: 0,
   },
+  // Add equalHeightCard style for flexbox equal height
+  equalHeightCard: {
+    flex: '1 1 0',
+    display: 'flex',
+    flexDirection: 'column',
+  },
 };
+
+// === INLINE EMAIL SIGNUP FORM COMPONENT ===
+function EmailSignupInline() {
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<'idle' | 'success' | 'error' | 'loading'>('idle');
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus('loading');
+    setError('');
+    try {
+      const res = await fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        setStatus('success');
+        setEmail('');
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Something went wrong.');
+        setStatus('error');
+      }
+    } catch (err) {
+      setError('Network error.');
+      setStatus('error');
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+      width: '100%',
+      maxWidth: 700,
+      margin: '32px auto 48px', // Move up from footer, add bottom margin
+      padding: 0,
+      background: 'none',
+      border: 'none',
+      boxShadow: 'none',
+      fontSize: '1rem',
+      flexWrap: 'wrap',
+    }}>
+      <label htmlFor="email-signup-inline" style={{ fontWeight: 600, color: '#fff', marginRight: 8, fontSize: '1.05rem' }}>
+        Get notified when a new version drops
+      </label>
+      <input
+        id="email-signup-inline"
+        type="email"
+        required
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        placeholder="Enter your email..."
+        style={{
+          padding: '10px 14px',
+          borderRadius: 6,
+          border: '1px solid #444',
+          fontSize: '1rem',
+          outline: 'none',
+          background: '#18181b',
+          color: '#fff',
+          minWidth: 180,
+        }}
+      />
+      <button
+        type="submit"
+        disabled={status === 'loading'}
+        style={{
+          padding: '10px 22px',
+          borderRadius: 6,
+          border: 'none',
+          background: colors.cardBg, // Use gray background like other boxes
+          color: '#fff',
+          fontWeight: 600,
+          fontSize: '1rem',
+          cursor: status === 'loading' ? 'not-allowed' : 'pointer',
+          opacity: status === 'loading' ? 0.7 : 1,
+          transition: 'opacity 0.2s',
+        }}
+      >
+        Notify Me
+      </button>
+      {status === 'success' && (
+        <span style={{ color: '#4CAF50', fontWeight: 500, marginLeft: 10 }}>Thank you! You’ll be notified.</span>
+      )}
+      {status === 'error' && (
+        <span style={{ color: '#f44336', fontWeight: 500, marginLeft: 10 }}>{error}</span>
+      )}
+    </form>
+  );
+}
