@@ -218,30 +218,7 @@ const styles: Record<string, React.CSSProperties> = {
     margin: '0 auto',
     boxSizing: 'border-box',
   },
-  // Responsive styles for mobile
-  '@media (max-width: 800px)': {
-    mainContent: {
-      flexDirection: 'column',
-      alignItems: 'stretch',
-      gap: '24px',
-      padding: '24px 0',
-      maxWidth: '98vw',
-    },
-    infoCard: {
-      marginRight: 0,
-      marginLeft: 0,
-      width: '100%',
-    },
-    displayCard: {
-      margin: '0',
-      width: '100%',
-    },
-    controlsCard: {
-      margin: '0',
-      width: '100%',
-      position: 'static',
-    },
-  },
+  // Responsive styles for mobile are handled in <style jsx global> above, not here.
   card: { backgroundColor: colors.cardBg, borderRadius: '16px', padding: '30px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', border: `1px solid ${colors.border}` },
   displayCard: {
     flex: '1 1 0',
