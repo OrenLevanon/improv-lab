@@ -108,14 +108,29 @@ export default function Home() {
         [data-checked="false"] { opacity: 0.3; transform: scale(0.8); } [data-checked="true"] { opacity: 1; transform: scale(1); }
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
         body { margin: 0; font-family: 'Poppins', sans-serif; background-color: #1a1a1d; color: #f0f0f0; }
+        @media (max-width: 800px) {
+          .mainContent-responsive {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 24px !important;
+            padding: 24px 0 !important;
+            max-width: 98vw !important;
+          }
+          .infoCard-responsive, .displayCard-responsive, .controlsCard-responsive {
+            margin: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            position: static !important;
+          }
+        }
       `}</style>
       <div style={styles.container}>
         <header style={styles.header}>
             <h1 style={styles.headerTitle}>Improv Lab</h1><p style={styles.headerSubtitle}>By Oren Levanon</p>
         </header>
-        <main style={styles.mainContent}>
+        <main className="mainContent-responsive" style={styles.mainContent}>
           {/* === INFO SECTION === */}
-          <div style={styles.infoCard}>
+          <div className="infoCard-responsive" style={styles.infoCard}>
             <h2 style={styles.infoTitle}>Info</h2>
             <div style={styles.accordionGroup}>
               <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, how: !o.how}))}>
@@ -134,12 +149,12 @@ export default function Home() {
           </div>
           {/* === END INFO SECTION === */}
           {/* Main display and controls */}
-          <div style={{...styles.card, ...styles.displayCard}}>
+          <div className="displayCard-responsive" style={{...styles.card, ...styles.displayCard}}>
                 <div style={styles.chordDisplay}><p style={styles.chordLabel}>Current Chord</p><p style={styles.chordName}>{currentChord?.name || "—"}</p></div>
                 <div style={styles.outlineDisplay}><p style={styles.outlineLabel}>Outline</p><p style={styles.outlineText}>{customText}</p></div>
                 <div style={styles.nextUpDisplay}><p style={styles.nextUpText}>Next: {nextText || "—"}</p></div>
             </div>
-            <div style={{...styles.card, ...styles.controlsCard}}>
+            <div className="controlsCard-responsive" style={{...styles.card, ...styles.controlsCard}}>
                 <h2 style={styles.settingsTitle}>Settings</h2>
                 <div style={styles.settingGroup}>
                     <label style={styles.label}>Change Chord Every</label>
@@ -195,6 +210,33 @@ const styles: Record<string, React.CSSProperties> = {
     maxWidth: '1400px',
     margin: '0 auto',
     boxSizing: 'border-box',
+  },
+  // Responsive styles for mobile
+  '@media (max-width: 800px)': {
+    mainContent: {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: '24px',
+      padding: '24px 0',
+      maxWidth: '98vw',
+    },
+    infoCard: {
+      marginRight: 0,
+      marginLeft: 0,
+      maxWidth: '100%',
+      width: '100%',
+    },
+    displayCard: {
+      margin: '0',
+      maxWidth: '100%',
+      width: '100%',
+    },
+    controlsCard: {
+      margin: '0',
+      maxWidth: '100%',
+      width: '100%',
+      position: 'static',
+    },
   },
   card: { backgroundColor: colors.cardBg, borderRadius: '16px', padding: '30px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', border: `1px solid ${colors.border}` },
   displayCard: {
