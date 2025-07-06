@@ -94,6 +94,14 @@ export default function Home() {
   const startPlayback = () => { /* (Unchanged) */ const context = contextRef.current; if (isPlaying || !context) return; if (availableChords.length === 0) { alert("Please select at least one Chord Type."); return; } if (availableTextCategories.length === 0) { alert("Please select at least one Outline type."); return; } context.resume(); setIsPlaying(true); const firstChord = availableChords[Math.floor(Math.random() * availableChords.length)]; const firstText = getRandomFilteredText(firstChord); if (!firstText) { setCustomText("No outlines available for your selection."); stopPlayback(); return; } playChord(firstChord, firstText); scheduleNextLoop(); };
   const stopPlayback = () => { /* (Unchanged) */ setIsPlaying(false); if (loopTimeout.current) clearTimeout(loopTimeout.current); stopAllAudio(); contextRef.current?.suspend(); setCurrentChord(null); setCustomText("Select your settings and press play"); setNextText(""); lastPlayedRef.current = null; };
 
+  // Info section state
+  const [infoOpen, setInfoOpen] = useState<{ how: boolean; about: boolean; join: boolean }>({ how: false, about: false, join: false });
+
+  // Info texts
+  const howToUseText = `Start by choosing how long each chord should last, which chord types you want to hear, and what kinds of sounds you want to explore using the Outline options.\n\nOnce playback begins, the current chord will be shown on screen, along with a randomly selected outlining option (like a triad or Penta) for you to play over it.\n\nGet ready for the upcoming chord — and its outlining suggestion — shown below under Next.`;
+  const aboutText = `This is the very first version of a new app I’m developing to help musicians apply many of the techniques and sounds I teach — all within a musical context.\n\nI truly believe this is a fresh and fun way to practice the fundamentals on your instrument, while exploring new sounds and enjoying the process.\nA real win–win–win.\n\nIn the future, many more chord types, keys, drum grooves, and play-along options will be added.\nMost outlining sounds will also be connected to lessons, in case you want more ideas or a deeper understanding of how to use them and how they work.\n\nWe’re at the very beginning of something I’m excited to share — and there’s much more to come.`;
+  const joinText = `I’m recording all the audio from my home studio and coding the app with AI.\nIf you’re a musician and want to contribute recordings for future play-along features, or a software developer who’s into creative tools and could help improve the app — I’d love to collaborate.\n\nJust drop me a message via the Contact page on my website or reach out on social media.`;
+
   return (
     <>
       <style jsx global>{`
@@ -106,7 +114,27 @@ export default function Home() {
             <h1 style={styles.headerTitle}>Improv Lab</h1><p style={styles.headerSubtitle}>By Oren Levanon</p>
         </header>
         <main style={styles.mainContent}>
-            <div style={{...styles.card, ...styles.displayCard}}>
+          {/* === INFO SECTION === */}
+          <div style={styles.infoCard}>
+            <h2 style={styles.infoTitle}>Info</h2>
+            <div style={styles.accordionGroup}>
+              <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, how: !o.how}))}>
+                How To Use <span style={styles.accordionArrow}>{infoOpen.how ? '▲' : '▼'}</span>
+              </button>
+              {infoOpen.how && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{howToUseText}</pre></div>}
+              <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, about: !o.about}))}>
+                About <span style={styles.accordionArrow}>{infoOpen.about ? '▲' : '▼'}</span>
+              </button>
+              {infoOpen.about && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{aboutText}</pre></div>}
+              <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, join: !o.join}))}>
+                Join The Development <span style={styles.accordionArrow}>{infoOpen.join ? '▲' : '▼'}</span>
+              </button>
+              {infoOpen.join && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{joinText}</pre></div>}
+            </div>
+          </div>
+          {/* === END INFO SECTION === */}
+          {/* Main display and controls */}
+          <div style={{...styles.card, ...styles.displayCard}}>
                 <div style={styles.chordDisplay}><p style={styles.chordLabel}>Current Chord</p><p style={styles.chordName}>{currentChord?.name || "—"}</p></div>
                 <div style={styles.outlineDisplay}><p style={styles.outlineLabel}>Outline</p><p style={styles.outlineText}>{customText}</p></div>
                 <div style={styles.nextUpDisplay}><p style={styles.nextUpText}>Next: {nextText || "—"}</p></div>
@@ -147,7 +175,7 @@ export default function Home() {
 }
 
 // === STYLES (UPDATED) ===
-const colors = { darkBg: '#1a1a1d', cardBg: '#2c2c34', primaryAccent: '#00bcd4', text: '#f0f0f0', textMuted: '#a0a0a0', border: '#444', playGreen: '#4CAF50', stopRed: '#f44336' };
+const colors = { darkBg: '#1a1a1d', cardBg: '#2c2c34', primaryAccent: '#00bcd4', text: '#f0f0f0', textMuted: '#a0a0a0', border: '#444', playGreen: '#4CAF50', stopRed: '#f44336', infoBg: '#23232a', infoAccent: '#00bcd4', infoBorder: '#444' };
 
 const styles: Record<string, React.CSSProperties> = {
   container: { minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: colors.darkBg, color: colors.text },
@@ -155,10 +183,48 @@ const styles: Record<string, React.CSSProperties> = {
   // UPDATED: color changed to white (colors.text)
   headerTitle: { margin: 0, fontSize: '2rem', fontWeight: 700, color: colors.text },
   headerSubtitle: { margin: '4px 0 0', color: colors.textMuted, fontWeight: 400 },
-  mainContent: { flex: 1, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start', gap: '40px', padding: '40px', width: '100%', maxWidth: '1200px', margin: '0 auto', boxSizing: 'border-box' },
+  mainContent: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    gap: '32px',
+    padding: '40px 0',
+    width: '100%',
+    maxWidth: '1400px',
+    margin: '0 auto',
+    boxSizing: 'border-box',
+  },
   card: { backgroundColor: colors.cardBg, borderRadius: '16px', padding: '30px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', border: `1px solid ${colors.border}` },
-  displayCard: { flex: '2 1 500px', display: 'flex', flexDirection: 'column', gap: '25px' },
-  controlsCard: { flex: '1 1 300px', position: 'sticky', top: '40px' },
+  displayCard: {
+    flex: '2 1 600px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '25px',
+    minWidth: 350,
+    maxWidth: 700,
+    margin: '0 12px',
+    backgroundColor: colors.cardBg,
+    borderRadius: '16px',
+    padding: '30px',
+    boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+    border: `1px solid ${colors.border}`,
+  },
+  controlsCard: {
+    flex: '0 1 300px',
+    position: 'sticky',
+    top: '40px',
+    minWidth: 220,
+    maxWidth: 320,
+    backgroundColor: colors.cardBg,
+    borderRadius: '16px',
+    padding: '30px',
+    boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+    border: `1px solid ${colors.border}`,
+    alignSelf: 'flex-start',
+    color: colors.text,
+  },
   chordDisplay: { textAlign: 'center' },
   chordLabel: { margin: 0, color: colors.textMuted, fontSize: '1rem' },
   // UPDATED: color changed to white (colors.text)
@@ -181,5 +247,59 @@ const styles: Record<string, React.CSSProperties> = {
   selectArrow: { transition: 'transform 0.2s ease' },
   selectDropdown: { position: 'absolute', top: '105%', left: 0, right: 0, backgroundColor: '#3c3c44', border: `1px solid ${colors.border}`, borderRadius: '8px', listStyle: 'none', padding: '5px', margin: 0, zIndex: 10, maxHeight: '200px', overflowY: 'auto' },
   selectOption: { padding: '10px 15px', borderRadius: '6px', cursor: 'pointer', transition: 'background-color 0.2s ease', display: 'flex', alignItems: 'center', gap: '10px' },
-  checkbox: { width: '18px', height: '18px', border: `2px solid ${colors.primaryAccent}`, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.darkBg, fontWeight: 'bold', transition: 'all 0.2s ease' }
+  checkbox: { width: '18px', height: '18px', border: `2px solid ${colors.primaryAccent}`, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.darkBg, fontWeight: 'bold', transition: 'all 0.2s ease' },
+  // === INFO SECTION STYLES ===
+  infoCard: {
+    flex: '0 1 300px',
+    backgroundColor: colors.cardBg, // match Settings
+    borderRadius: '16px',
+    padding: '30px', // match Settings
+    border: `1px solid ${colors.border}`,
+    minWidth: 220,
+    maxWidth: 320,
+    boxShadow: '0 10px 30px rgba(0,0,0,0.2)', // match Settings
+    alignSelf: 'flex-start',
+    color: '#fff',
+  },
+  infoTitle: {
+    margin: '0 0 25px 0',
+    textAlign: 'center',
+    color: colors.text,
+    fontWeight: 600,
+    fontSize: '1.3rem',
+  },
+  accordionGroup: { display: 'flex', flexDirection: 'column', gap: '20px' },
+  accordionButton: {
+    background: 'rgba(255,255,255,0.05)',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '8px',
+    color: colors.text,
+    fontWeight: 600,
+    fontSize: '1rem',
+    padding: '12px 15px',
+    cursor: 'pointer',
+    textAlign: 'left',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    transition: 'background 0.2s',
+    outline: 'none',
+  },
+  accordionArrow: { marginLeft: 'auto', fontSize: '1.1em', color: colors.textMuted },
+  accordionContent: {
+    background: 'rgba(255,255,255,0.05)',
+    borderRadius: '8px',
+    padding: '12px 15px',
+    marginTop: '-2px',
+    marginBottom: '6px',
+    border: `1px solid ${colors.border}`,
+    color: colors.text,
+  },
+  infoTextBlock: {
+    color: colors.text,
+    fontSize: '0.98rem',
+    whiteSpace: 'pre-wrap',
+    fontFamily: 'inherit',
+    margin: 0,
+  },
 };
