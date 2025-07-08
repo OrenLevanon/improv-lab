@@ -124,9 +124,12 @@ export default function Home() {
           }
         }
       `}</style>
+      <head>
+        <title>Solo Lab - v1.0</title>
+      </head>
       <div style={styles.container}>
         <header style={styles.header}>
-            <h1 style={styles.headerTitle}>Improv Lab Ver 1.0</h1>
+            <h1 style={styles.headerTitle}>Solo Lab - v1.0</h1>
             <p style={styles.headerSubtitle}>A practice tool to expand your harmonic vocabulary.</p>
         </header>
         <main className="mainContent-responsive" style={styles.mainContent}>
@@ -189,7 +192,7 @@ export default function Home() {
         {/* === END EMAIL SIGNUP FORM === */}
         <footer style={styles.footer}><p style={styles.infoText}>©
 2025 Oren
-Levanon / Improv
+Levanon / Solo
 Lab. All rights reserved.</p></footer>
       </div>
     </>
