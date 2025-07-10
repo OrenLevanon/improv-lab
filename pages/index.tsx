@@ -5,12 +5,311 @@ type ChordType = 'maj7' | 'min7' | 'dom7';
 type TextCategory = 'triads' | 'triads_plus_one' | 'pentatonics' | 'pairs';
 interface Chord { name: string; type: ChordType; audioFile: string; bassFile?: string; texts: Partial<Record<TextCategory, string[]>>; }
 
-// === CHORD DATA (Unchanged) ===
+// === CHORD DATA (UPDATED) ===
 const CHORDS: Chord[] = [
-  { name: "Cmaj7", type: "maj7", audioFile: "gtr_cmaj7.wav", bassFile: "bass_c.wav", texts: { triads: ["D major triad", "E major triad", "G major triad", "A minor triad", "B minor triad"], triads_plus_one: ["D sus2", "E sus2", "G sus2", "D sus4", "E sus4", "G sus4", "B sus4", "Dmaj add2", "Dmaj add4", "Emin add2", "Emin add4", "Gmaj add2", "Gmaj add4", "Amin add2", "Amin add4", "Bmin add4"], pentatonics: ["Cmaj pentatonic", "Dmaj pentatonic", "Emin pentatonic", "Gmaj pentatonic", "Bmin pentatonic"], pairs: ["Cmaj / Dmaj", "Bmin / Cmaj", "Cmaj / Bbmaj"], } },
-  { name: "G7Alt", type: "dom7", audioFile: "gtr_galt.wav", bassFile: "bass_g.wav", texts: { triads: ["Ab minor triad", "Bb minor triad", "Db major triad", "Eb major triad"], triads_plus_one: ["Ab sus2", "Ab sus4", "Bb susb2", "Bb sus4", "Db sus2", "Db sus#4", "Eb sus2", "Eb sus4", "Abmin add4", "Abmin add2", "Bbmin addb2", "Bbmin add4", "Db add2", "Db add#4", "Eb add2", "Eb add4"], pentatonics: ["Abmin6 pentatonic", "Dbmaj pentatonic"], pairs: ["Abmin / Bbmin", "Dbmaj / Ebmaj"], } },
-  { name: "G7b9", type: "dom7", audioFile: "gtr_g7b9.wav", bassFile: "bass_g.wav", texts: { triads: ["Bb major triad", "Bb minor triad", "Dbmaj", "Dbmin", "Emaj", "Emin"], triads_plus_one: ["Bb minor & major triads", "Bbmin6", "Bbmaj6", "Bbaddb2", "Bbadd#4", "Db minor & major", "Dbmin6", "Dbmaj6", "Dbaddb2", "Dbadd#4", "E minor & major", "Emin6", "Emaj6", "Eaddb2", "Eadd#4"], pentatonics: ["Bb7b9 pentatonic", "Db7b9 pentatonic", "E7b9 pentatonic"], pairs: ["Triad pairs: Gmaj / Dbmaj", "Gmaj / Dbmin", "Gmaj / Bbmin", "Emaj / Bbmin"], } },
-  { name: "Cmin7", type: "min7", audioFile: "gtr_cmin7.wav", bassFile: "bass_c.wav", texts: { triads: ["D minor triad", "Eb major triad", "F major triad", "G minor triad", "Bb major triad"], triads_plus_one: ["Dmin susb2", "Eb sus2", "Fsus2", "Fsus4", "Gsus2", "Gsus4", "Dsus4", "Ebsus4", "Gsus4", "Bbsus4", "Dmin addb2", "Dmin add4", "Ebmaj sus add2", "Ebmaj sus add4", "Fmaj add2", "Fmaj add4", "Gmin add2", "Gmin add4", "Bbmaj add4", "Bbmaj add2"], pentatonics: ["Cmin pentatonic", "Dmin pentatonic", "Gmin pentatonic"], pairs: ["Cmin / Dmin", "Dmin / Ebmaj", "Ebmaj / Fmaj"], } }
+  {
+    name: "Cmaj7",
+    type: "maj7",
+    audioFile: "gtr_cmaj7.wav",
+    bassFile: "bass_c.wav",
+    texts: {
+      triads: [
+        "D major triad",
+        "G major triad",
+        "A minor triad",
+        "B minor triad",
+        "D sus2",
+        "E sus2",
+        "G sus2",
+        "D sus4",
+        "E sus4",
+        "G sus4"
+      ],
+      triads_plus_one: [
+        "Dmaj add2",
+        "Dmaj add4",
+        "Emin add2",
+        "Emin add4",
+        "Gmaj add2",
+        "Gmaj add4",
+        "Amin add2",
+        "Amin add4",
+        "Bmin add4"
+      ],
+      pentatonics: ["Cmaj pentatonic", "Dmaj pentatonic", "Emin pentatonic", "Gmaj pentatonic", "Bmin pentatonic"],
+      pairs: ["Cmaj / Dmaj", "Bmin / Cmaj", "Dmaj / Emin"]
+    }
+  },
+  {
+    name: "G7Alt",
+    type: "dom7",
+    audioFile: "gtr_galt.wav",
+    bassFile: "bass_g.wav",
+    texts: {
+      triads: [
+        "Ab minor triad",
+        "Bb minor triad",
+        "Db major triad",
+        "Eb major triad",
+        "Ab sus2",
+        "Ab sus4",
+        "Bb susb2",
+        "Bb sus4",
+        "Db sus2",
+        "Db sus#4",
+        "Eb sus2",
+        "Eb sus4"
+      ],
+      triads_plus_one: [
+        "Abmin add2",
+        "Abmin add4",
+        "Bbmin addb2",
+        "Bbmin add4",
+        "Dbmaj add2",
+        "Dbmaj add#4",
+        "Ebmaj add2",
+        "Ebmaj add4"
+      ],
+      pentatonics: ["Abmin6 pentatonic", "Dbmaj pentatonic", "Ebmaj pentatonic"],
+      pairs: ["Abmin / Bbmin", "Dbmaj / Ebmaj", "Abmin / Gdim"]
+    }
+  },
+  {
+    name: "G7b9",
+    type: "dom7",
+    audioFile: "gtr_g7b9.wav",
+    bassFile: "bass_g.wav",
+    texts: {
+      triads: [
+        "Bb major triad",
+        "Bb minor triad",
+        "Db major triad",
+        "Db minor triad",
+        "E major triad",
+        "E minor triad"
+      ],
+      triads_plus_one: [
+        "Bbmaj addb2",
+        "Bbmaj add#4",
+        "Bbmaj6",
+        "Bbmin6",
+        "Dbmaj addb2",
+        "Dbmaj add#4",
+        "Dbmaj6",
+        "Dbmin6",
+        "Emaj addb2",
+        "Emaj add#4",
+        "Emaj6",
+        "Emin6"
+      ],
+      pentatonics: ["Bb7b9 pentatonic", "Db7b9 pentatonic", "E7b9 pentatonic"],
+      pairs: ["Triad pairs: Gmaj / Dbmaj", "Gmaj / Dbmin", "Gmaj / Bbmin", "Emaj / Bbmin"]
+    }
+  },
+  {
+    name: "Cmin7",
+    type: "min7",
+    audioFile: "gtr_cmin7.wav",
+    bassFile: "bass_c.wav",
+    texts: {
+      triads: [
+        "D minor triad",
+        "Eb major triad",
+        "F major triad",
+        "G minor triad",
+        "Bb major triad",
+        "Eb sus2",
+        "F sus2",
+        "G sus2",
+        "Eb sus#4",
+        "F sus4",
+        "G sus4"
+      ],
+      triads_plus_one: [
+        "Dmin addb2",
+        "Dmin add4",
+        "Ebmaj add2",
+        "Ebmaj add#4",
+        "Fmaj add2",
+        "Fmaj add4",
+        "Gmin add2",
+        "Gmin add4",
+        "Bbmaj add2",
+        "Bbmaj add4"
+      ],
+      pentatonics: ["Cmin pentatonic", "Dmin pentatonic", "Gmin pentatonic"],
+      pairs: ["Cmin / Dmin", "Dmin / Ebmaj", "Ebmaj / Fmaj"]
+    }
+  },
+  {
+    name: "Abmaj7",
+    type: "maj7",
+    audioFile: "gtr_abmaj7.wav",
+    bassFile: "bass_ab.wav",
+    texts: {
+      triads: [
+        "Bb major triad",
+        "Eb major triad",
+        "F minor triad",
+        "G minor triad",
+        "Bb sus2",
+        "C sus2",
+        "Eb sus2",
+        "Bb sus4",
+        "C sus4",
+        "Eb sus4"
+      ],
+      triads_plus_one: [
+        "Bbmaj add2",
+        "Bbmaj add4",
+        "Cmin add2",
+        "Cmin add4",
+        "Ebmaj add2",
+        "Ebmaj add4",
+        "Fmin add2",
+        "Fmin add4",
+        "Gmin addb2",
+        "Gmin add4"
+      ],
+      pentatonics: ["Abmaj pentatonic", "Bbmaj pentatonic", "Cmin pentatonic", "Ebmaj pentatonic", "Gmin pentatonic"],
+      pairs: ["Abmaj / Bbmaj", "Gmin / Abmaj", "Bbmaj / Cmin"]
+    }
+  },
+  {
+    name: "Fmaj7",
+    type: "maj7",
+    audioFile: "gtr_fmaj7.wav",
+    bassFile: "bass_f.wav",
+    texts: {
+      triads: [
+        "G major triad",
+        "C major triad",
+        "D minor triad",
+        "E minor triad",
+        "G sus2",
+        "A sus2",
+        "C sus2",
+        "G sus4",
+        "A sus4",
+        "C sus4"
+      ],
+      triads_plus_one: [
+        "Gmaj add2",
+        "Gmaj add4",
+        "Amin add2",
+        "Amin add4",
+        "Cmaj add2",
+        "Cmaj add4",
+        "Dmin add2",
+        "Dmin add4",
+        "Emin add4"
+      ],
+      pentatonics: ["Fmaj pentatonic", "Gmaj pentatonic", "Amin pentatonic", "Dmin pentatonic", "Emin pentatonic"],
+      pairs: ["Fmaj / Gmaj", "Fmaj / Emin", "Cmaj / Dmin"]
+    }
+  },
+  {
+    name: "Dmin7",
+    type: "min7",
+    audioFile: "gtr_dmin7.wav",
+    bassFile: "bass_d.wav",
+    texts: {
+      triads: [
+        "E minor triad",
+        "F major triad",
+        "G major triad",
+        "A minor triad",
+        "C major triad",
+        "F sus2",
+        "G sus2",
+        "A sus2",
+        "F sus#4",
+        "G sus4",
+        "A sus4"
+      ],
+      triads_plus_one: [
+        "Emin addb2",
+        "Emin add4",
+        "Fmaj add2",
+        "Fmaj add#4",
+        "Gmaj add2",
+        "Gmaj add4",
+        "Amin add2",
+        "Amin add4",
+        "Cmaj add2",
+        "Cmaj add4"
+      ],
+      pentatonics: ["Dmin pentatonic", "Emin pentatonic", "Fmaj pentatonic", "Gmaj pentatonic", "Amin pentatonic"],
+      pairs: ["Dmin / Emin", "Fmaj / Emin", "Gmaj / Amin"]
+    }
+  },
+  {
+    name: "Fmin7",
+    type: "min7",
+    audioFile: "gtr_fmin7.wav",
+    bassFile: "bass_f.wav",
+    texts: {
+      triads: [
+        "G minor triad",
+        "Ab major triad",
+        "Bb major triad",
+        "C minor triad",
+        "Eb major triad",
+        "Ab sus2",
+        "Bb sus2",
+        "C sus2",
+        "Ab sus4",
+        "Bb sus4",
+        "C sus4"
+      ],
+      triads_plus_one: [
+        "Gmin addb2",
+        "Gmin add4",
+        "Abmaj add2",
+        "Abmaj add#4",
+        "Bbmaj add2",
+        "Bbmaj add4",
+        "Cmin add2",
+        "Cmin add4",
+        "Ebmaj add2",
+        "Ebmaj add4"
+      ],
+      pentatonics: ["Fmin pentatonic", "Gmin pentatonic", "Abmaj pentatonic", "Bbmaj pentatonic", "Cmin pentatonic"],
+      pairs: ["Fmin / Gmin", "Abmaj / Bbmaj", "Bbmaj / Cmin"]
+    }
+  },
+  {
+    name: "D7b9",
+    type: "dom7",
+    audioFile: "gtr_d7b9.wav",
+    bassFile: "bass_d.wav",
+    texts: {
+      triads: [
+        "F major triad",
+        "F minor triad",
+        "Ab major triad",
+        "Ab minor triad",
+        "B major triad",
+        "B minor triad"
+      ],
+      triads_plus_one: [
+        "Fmaj addb2",
+        "Fmaj add#4",
+        "Fmin6",
+        "Fmaj6",
+        "Abmaj addb2",
+        "Abmaj add#4",
+        "Abmin6",
+        "Abmaj6",
+        "Bmaj add2",
+        "Bmaj add#4",
+        "Bmin6",
+        "Bmaj6"
+      ],
+      pentatonics: ["F7b9 pentatonic", "Ab7b9 pentatonic", "B7b9 pentatonic"],
+      pairs: ["Triad pairs: Dmaj / Abmaj", "Dmaj / Abmin", "Dmaj / Fmin", "Bmaj / Fmin"]
+    }
+  }
 ];
 
 const BEAT_INTERVAL_SEC = 60 / 135;
@@ -51,6 +350,19 @@ export default function Home() {
   const [barsPerChord, setBarsPerChord] = useState<number>(8);
   const [chordFilters, setChordFilters] = useState<Record<ChordType, boolean>>(Object.fromEntries(CHORD_TYPE_OPTIONS.map(opt => [opt.value, true])) as Record<ChordType, boolean>);
   const [textFilters, setTextFilters] = useState<Record<TextCategory, boolean>>(Object.fromEntries(TEXT_TYPE_OPTIONS.map(opt => [opt.value, true])) as Record<TextCategory, boolean>);
+  // === CUSTOM CHORDS STATE ===
+  const [customChords, setCustomChords] = useState<string[]>(["", "", "", ""]);
+  const [useCustomChords, setUseCustomChords] = useState(false);
+  const customChordIndex = useRef(0);
+
+  function handleCustomChordChange(idx: number, value: string) {
+    setCustomChords(prev => {
+      const next = [...prev];
+      next[idx] = value;
+      return next;
+    });
+  }
+
   const contextRef = useRef<AudioContext | null>(null);
   const bufferRefs = useRef<Record<string, AudioBuffer>>({});
   const currentSources = useRef<AudioBufferSourceNode[]>([]);
@@ -90,17 +402,74 @@ export default function Home() {
   const stopAllAudio = () => { /* (Unchanged) */ currentSources.current.forEach(src => { try { src.stop(); } catch { } }); currentSources.current = []; };
   const playChord = useCallback((chord: Chord, text: string) => { /* (Unchanged) */ const context = contextRef.current; if (!context) return; stopAllAudio(); ["drumgroove_135.wav", chord.audioFile, chord.bassFile].forEach(file => { if (file && bufferRefs.current[file]) { const src = context.createBufferSource(); src.buffer = bufferRefs.current[file]; src.loop = true; src.connect(context.destination); src.start(); currentSources.current.push(src); } }); setCurrentChord(chord); setCustomText(text); setNextText("..."); lastPlayedRef.current = { chordName: chord.name, text }; }, []);
   const getRandomFilteredText = useCallback((chord: Chord): string | null => { /* (Unchanged) */ const possibleTexts = availableTextCategories.flatMap(cat => chord.texts[cat] || []); if (possibleTexts.length === 0) return null; return possibleTexts[Math.floor(Math.random() * possibleTexts.length)]; }, [availableTextCategories]);
-  const scheduleNextLoop = useCallback(() => { /* (Unchanged) */ if (availableChords.length === 0 || availableTextCategories.length === 0) { setNextText("Change filters to continue."); return; } let upcomingChord: Chord, previewText: string | null, attempts = 0; do { upcomingChord = availableChords[Math.floor(Math.random() * availableChords.length)]; previewText = getRandomFilteredText(upcomingChord); attempts++; } while ( previewText && lastPlayedRef.current && upcomingChord.name === lastPlayedRef.current.chordName && previewText === lastPlayedRef.current.text && attempts < 20 ); if (!previewText) { setNextText("No outlines for selected filters."); return; } const interval = barsPerChord * BEAT_INTERVAL_SEC * 4 * 1000; const previewTimeout = setTimeout(() => { setNextText(`${upcomingChord.name}: ${previewText}`); }, interval - PREVIEW_OFFSET_MS); loopTimeout.current = setTimeout(() => { clearTimeout(previewTimeout); playChord(upcomingChord, previewText as string); scheduleNextLoop(); }, interval); }, [availableChords, availableTextCategories, barsPerChord, getRandomFilteredText, playChord]);
-  const startPlayback = () => { /* (Unchanged) */ const context = contextRef.current; if (isPlaying || !context) return; if (availableChords.length === 0) { alert("Please select at least one Chord Type."); return; } if (availableTextCategories.length === 0) { alert("Please select at least one Outline type."); return; } context.resume(); setIsPlaying(true); const firstChord = availableChords[Math.floor(Math.random() * availableChords.length)]; const firstText = getRandomFilteredText(firstChord); if (!firstText) { setCustomText("No outlines available for your selection."); stopPlayback(); return; } playChord(firstChord, firstText); scheduleNextLoop(); };
+  const scheduleNextLoop = useCallback((customMode?: boolean) => {
+    if (useCustomChords && customMode && customChords.filter(Boolean).length === 4) {
+      const idx = (customChordIndex.current + 1) % 4;
+      customChordIndex.current = idx;
+      const chord = CHORDS.find(c => c.name === customChords[idx]);
+      if (!chord) return;
+      const text = getRandomFilteredText(chord);
+      if (!text) { setNextText("No outlines for selected filters."); return; }
+      const interval = barsPerChord * BEAT_INTERVAL_SEC * 4 * 1000;
+      const previewTimeout = setTimeout(() => { setNextText(`${chord.name}: ${text}`); }, interval - PREVIEW_OFFSET_MS);
+      loopTimeout.current = setTimeout(() => {
+        clearTimeout(previewTimeout);
+        playChord(chord, text);
+        scheduleNextLoop(true);
+      }, interval);
+      return;
+    }
+    // ...existing code for random playback...
+    if (availableChords.length === 0 || availableTextCategories.length === 0) { setNextText("Change filters to continue."); return; }
+    let upcomingChord: Chord, previewText: string | null, attempts = 0;
+    do {
+      upcomingChord = availableChords[Math.floor(Math.random() * availableChords.length)];
+      previewText = getRandomFilteredText(upcomingChord); attempts++;
+    } while ( previewText && lastPlayedRef.current && upcomingChord.name === lastPlayedRef.current.chordName && previewText === lastPlayedRef.current.text && attempts < 20 );
+    if (!previewText) { setNextText("No outlines for selected filters."); return; }
+    const interval = barsPerChord * BEAT_INTERVAL_SEC * 4 * 1000;
+    const previewTimeout = setTimeout(() => { setNextText(`${upcomingChord.name}: ${previewText}`); }, interval - PREVIEW_OFFSET_MS);
+    loopTimeout.current = setTimeout(() => { clearTimeout(previewTimeout); playChord(upcomingChord, previewText as string); scheduleNextLoop(false); }, interval);
+  }, [availableChords, availableTextCategories, barsPerChord, getRandomFilteredText, playChord, useCustomChords, customChords]);
+  const startPlayback = () => {
+    const context = contextRef.current;
+    if (isPlaying || !context) return;
+    if (useCustomChords && customChords.filter(Boolean).length === 4) {
+      context.resume();
+      setIsPlaying(true);
+      customChordIndex.current = 0;
+      const chord = CHORDS.find(c => c.name === customChords[0]);
+      if (!chord) return;
+      const text = getRandomFilteredText(chord);
+      if (!text) {
+        setCustomText("No outlines available for your selection.");
+        stopPlayback();
+        return;
+      }
+      playChord(chord, text);
+      scheduleNextLoop(true);
+      return;
+    }
+    // ...existing code for random playback...
+    if (availableChords.length === 0) { alert("Please select at least one Chord Type."); return; }
+    if (availableTextCategories.length === 0) { alert("Please select at least one Outline type."); return; }
+    context.resume(); setIsPlaying(true);
+    const firstChord = availableChords[Math.floor(Math.random() * availableChords.length)];
+    const firstText = getRandomFilteredText(firstChord);
+    if (!firstText) { setCustomText("No outlines available for your selection."); stopPlayback(); return; }
+    playChord(firstChord, firstText); scheduleNextLoop(false);
+  };
   const stopPlayback = () => { /* (Unchanged) */ setIsPlaying(false); if (loopTimeout.current) clearTimeout(loopTimeout.current); stopAllAudio(); contextRef.current?.suspend(); setCurrentChord(null); setCustomText("Select your settings and press play"); setNextText(""); lastPlayedRef.current = null; };
 
   // Info section state
-  const [infoOpen, setInfoOpen] = useState<{ how: boolean; about: boolean; join: boolean }>({ how: false, about: false, join: false });
+  const [infoOpen, setInfoOpen] = useState<{ how: boolean; about: boolean; join: boolean; updates: boolean; coming: boolean }>({ how: false, about: false, join: false, updates: false, coming: false });
 
   // Info texts
   const howToUseText = `Start by choosing how long each chord should last, which chord types you want to hear, and what kinds of sounds you want to explore using the Outline options.\n\nOnce playback begins, the current chord will be shown on screen, along with a randomly selected outlining option (like a triad or Penta) for you to play over it.\n\nGet ready for the upcoming chord — and its outlining suggestion — shown below under Next.`;
   const aboutText = `This is the very first version of a new app I’m developing to help musicians apply many of the techniques and sounds I teach — all within a musical context.\n\nI truly believe this is a fresh and fun way to practice the fundamentals on your instrument, while exploring new sounds and enjoying the process.\nA real win–win–win.\n\nIn the future, many more chord types, keys, drum grooves, and play-along options will be added.\nMost outlining sounds will also be connected to lessons, in case you want more ideas or a deeper understanding of how to use them and how they work.\n\nWe’re at the very beginning of something I’m excited to share — and there’s much more to come.`;
   const joinText = `I’m recording all the audio from my home studio and coding the app with AI.\nIf you’re a musician and want to contribute recordings for future play-along features, or a software developer who’s into creative tools and could help improve the app — I’d love to collaborate.\n\nJust drop me a message via the Contact page on my website or reach out on social media.`;
+  const updatesText = `Solo Lab has some new chords!\nI record everything piece by piece, so it takes time—but I’ll keep adding more regularly.\nOutline chords have been edited and a few mistakes fixed.\nA custom chord section has been added.\nOnly a 4-chord loop option is available for now—but this will be expanded soon.`;
+  const comingSoonText = `More drum styles and tempos, more chords,\nand the ability to click on a sound to learn more about it—\nwith teaching videos I’m making that explain how to use the sounds you like.`;
 
   return (
     <>
@@ -125,11 +494,11 @@ export default function Home() {
         }
       `}</style>
       <head>
-        <title>Solo Lab - v1.0</title>
+        <title>Solo Lab - v1.1</title>
       </head>
       <div style={styles.container}>
         <header style={styles.header}>
-            <h1 style={styles.headerTitle}>Solo Lab - v1.0</h1>
+            <h1 style={styles.headerTitle}>Solo Lab - v1.1</h1>
             <p style={styles.headerSubtitle}>A practice tool to expand your harmonic vocabulary.</p>
         </header>
         <main className="mainContent-responsive" style={styles.mainContent}>
@@ -149,6 +518,16 @@ export default function Home() {
                 Join The Development <span style={styles.accordionArrow}>{infoOpen.join ? '▲' : '▼'}</span>
               </button>
               {infoOpen.join && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{joinText}</pre></div>}
+              {/* === UPDATES TAB === */}
+              <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, updates: !o.updates}))}>
+                Updates <span style={styles.accordionArrow}>{infoOpen.updates ? '▲' : '▼'}</span>
+              </button>
+              {infoOpen.updates && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{updatesText}</pre></div>}
+              {/* === COMING SOON TAB === */}
+              <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, coming: !o.coming}))}>
+                Coming Soon <span style={styles.accordionArrow}>{infoOpen.coming ? '▲' : '▼'}</span>
+              </button>
+              {infoOpen.coming && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{comingSoonText}</pre></div>}
             </div>
           </div>
           {/* === END INFO SECTION === */}
@@ -185,6 +564,43 @@ export default function Home() {
                  <button style={isPlaying ? styles.stopButton : styles.playButton} onClick={() => isPlaying ? stopPlayback() : startPlayback()}>
                     {isPlaying ? "Stop Session" : "Start Session"}
                 </button>
+                {/* === CUSTOM CHORDS SECTION === */}
+                <div style={{ marginTop: 32 }}>
+                  <label style={{ fontWeight: 600, color: colors.text, fontSize: '1.1rem', marginBottom: 8, display: 'block' }}>Custom Chords</label>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                    {customChords.map((chordName, idx) => (
+                      <select
+                        key={idx}
+                        value={chordName}
+                        onChange={e => handleCustomChordChange(idx, e.target.value)}
+                        style={{
+                          padding: '10px 14px',
+                          borderRadius: 6,
+                          border: '1px solid #444',
+                          fontSize: '1rem',
+                          background: '#18181b',
+                          color: '#fff',
+                          minWidth: 120,
+                        }}
+                      >
+                        <option value="">(None)</option>
+                        {CHORDS.map(c => (
+                          <option key={c.name} value={c.name}>{c.name}</option>
+                        ))}
+                      </select>
+                    ))}
+                    <label style={{ marginLeft: 16, fontSize: '1rem', color: colors.text }}>
+                      <input
+                        type="checkbox"
+                        checked={useCustomChords}
+                        onChange={e => setUseCustomChords(e.target.checked)}
+                        style={{ marginRight: 6 }}
+                      />
+                      Use Custom Chord Loop
+                    </label>
+                  </div>
+                </div>
+                {/* === END CUSTOM CHORDS SECTION === */}
             </div>
         </main>
         {/* === EMAIL SIGNUP FORM === */}
