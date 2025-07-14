@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import Head from 'next/head';
 
 // === TYPE DEFINITIONS (Unchanged) ===
 type ChordType = 'maj7' | 'min7' | 'dom7';
@@ -493,13 +494,14 @@ export default function Home() {
           }
         }
       `}</style>
-      <head>
-        <title>Solo Lab - v1.1</title>
-      </head>
+      <Head>
+        <title>Solo Lab – A Jazz Improv Practice App by Oren Levanon</title>
+        <meta name="description" content="Solo Lab is a jazz improvisation app by Oren Levanon. Practice with real audio loops, chord suggestions, and interactive tools." />
+      </Head>
       <div style={styles.container}>
         <header style={styles.header}>
             <h1 style={styles.headerTitle}>Solo Lab - v1.1</h1>
-            <p style={styles.headerSubtitle}>A practice tool to expand your harmonic vocabulary.</p>
+            <p style={styles.headerSubtitle}>Take your solos to the next level.</p>
         </header>
         <main className="mainContent-responsive" style={styles.mainContent}>
           {/* === INFO SECTION === */}
