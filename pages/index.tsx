@@ -497,6 +497,7 @@ export default function Home() {
       <Head>
         <title>Solo Lab – A Jazz Improv Practice App by Oren Levanon</title>
         <meta name="description" content="Solo Lab is a jazz improvisation app by Oren Levanon. Practice with real audio loops, chord suggestions, and interactive tools." />
+        <meta name="google-site-verification" content="Dw0POM0c9pK2tUz5qtvH7AVQCARu6LTOj3Tv9m0egPg" />
       </Head>
       <div style={styles.container}>
         <header style={styles.header}>
