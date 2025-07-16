@@ -640,6 +640,7 @@ export default function Home() {
                         step={0.01}
                         value={masterVolume}
                         onChange={e => setMasterVolume(Number(e.target.value))}
+                        onDoubleClick={() => setMasterVolume(0.8)}
                         style={{ width: 80, height: 24, accentColor: '#fff', background: '#fff', borderRadius: 8, border: '1px solid #fff', transform: 'rotate(-90deg)' }}
                       />
                     </div>
@@ -653,6 +654,7 @@ export default function Home() {
                         step={0.01}
                         value={guitarVolume}
                         onChange={e => setGuitarVolume(Number(e.target.value))}
+                        onDoubleClick={() => setGuitarVolume(0.8)}
                         style={{ width: 80, height: 24, accentColor: '#fff', background: '#fff', borderRadius: 8, border: '1px solid #fff', transform: 'rotate(-90deg)' }}
                       />
                     </div>
@@ -666,6 +668,7 @@ export default function Home() {
                         step={0.01}
                         value={bassVolume}
                         onChange={e => setBassVolume(Number(e.target.value))}
+                        onDoubleClick={() => setBassVolume(0.8)}
                         style={{ width: 80, height: 24, accentColor: '#fff', background: '#fff', borderRadius: 8, border: '1px solid #fff', transform: 'rotate(-90deg)' }}
                       />
                     </div>
@@ -679,6 +682,7 @@ export default function Home() {
                         step={0.01}
                         value={drumsVolume}
                         onChange={e => setDrumsVolume(Number(e.target.value))}
+                        onDoubleClick={() => setDrumsVolume(0.8)}
                         style={{ width: 80, height: 24, accentColor: '#fff', background: '#fff', borderRadius: 8, border: '1px solid #fff', transform: 'rotate(-90deg)' }}
                       />
                     </div>
