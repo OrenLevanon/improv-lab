@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const data = await response.json();
       res.status(500).json({ error: data?.message || 'Failed to save email.' });
     }
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: 'Network error.' });
   }
 }
