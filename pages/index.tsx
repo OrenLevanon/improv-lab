@@ -259,7 +259,7 @@ const CHORDS: Chord[] = [
         "Ab sus2",
         "Bb sus2",
         "C sus2",
-        "Ab sus4",
+        "Ab sus#4",
         "Bb sus4",
         "C sus4"
       ],
@@ -345,7 +345,7 @@ function MultiSelectDropdown<T extends string>({ options, selected, onChange, la
 
 export default function Home() {
   const [currentChord, setCurrentChord] = useState<Chord | null>(null);
-  const [customText, setCustomText] = useState<string>("Select your settings and press play");
+  const [customText, setCustomText] = useState<string>("Select your settings and press Start Session");
   const [nextText, setNextText] = useState<string>("");
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [barsPerChord, setBarsPerChord] = useState<number>(8);
@@ -365,10 +365,12 @@ export default function Home() {
   }
 
   const contextRef = useRef<AudioContext | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
   const bufferRefs = useRef<Record<string, AudioBuffer>>({});
   const currentSources = useRef<AudioBufferSourceNode[]>([]);
   const loopTimeout = useRef<NodeJS.Timeout | null>(null);
   const lastPlayedRef = useRef<{ chordName: string; text: string } | null>(null);
+  const [masterVolume, setMasterVolume] = useState(0.8);
   const availableChords = useMemo(() => CHORDS.filter(chord => chordFilters[chord.type]), [chordFilters]);
   const availableTextCategories = useMemo(() => Object.keys(textFilters).filter(key => textFilters[key as TextCategory]) as TextCategory[], [textFilters]);
   
@@ -380,6 +382,11 @@ export default function Home() {
       const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       const context = new AudioContextClass();
       contextRef.current = context;
+      // Create master gain node
+      const gainNode = context.createGain();
+      gainNode.gain.value = 0.8;
+      gainNode.connect(context.destination);
+      gainNodeRef.current = gainNode;
       const allFiles = new Set<string>(["drumgroove_135.wav"]);
       CHORDS.forEach(c => { allFiles.add(c.audioFile); if (c.bassFile) allFiles.add(c.bassFile); });
       await Promise.all(
@@ -400,8 +407,33 @@ export default function Home() {
     initAudio();
   }, []);
 
-  const stopAllAudio = () => { /* (Unchanged) */ currentSources.current.forEach(src => { try { src.stop(); } catch { } }); currentSources.current = []; };
-  const playChord = useCallback((chord: Chord, text: string) => { /* (Unchanged) */ const context = contextRef.current; if (!context) return; stopAllAudio(); ["drumgroove_135.wav", chord.audioFile, chord.bassFile].forEach(file => { if (file && bufferRefs.current[file]) { const src = context.createBufferSource(); src.buffer = bufferRefs.current[file]; src.loop = true; src.connect(context.destination); src.start(); currentSources.current.push(src); } }); setCurrentChord(chord); setCustomText(text); setNextText("..."); lastPlayedRef.current = { chordName: chord.name, text }; }, []);
+  const stopAllAudio = () => { currentSources.current.forEach(src => { try { src.stop(); } catch { } }); currentSources.current = []; };
+  const playChord = useCallback((chord: Chord, text: string) => {
+    const context = contextRef.current;
+    const gainNode = gainNodeRef.current;
+    if (!context || !gainNode) return;
+    stopAllAudio();
+    ["drumgroove_135.wav", chord.audioFile, chord.bassFile].forEach(file => {
+      if (file && bufferRefs.current[file]) {
+        const src = context.createBufferSource();
+        src.buffer = bufferRefs.current[file];
+        src.loop = true;
+        src.connect(gainNode);
+        src.start();
+        currentSources.current.push(src);
+      }
+    });
+    setCurrentChord(chord);
+    setCustomText(text);
+    setNextText("...");
+    lastPlayedRef.current = { chordName: chord.name, text };
+  }, []);
+  // Update gain node when masterVolume changes
+  useEffect(() => {
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = masterVolume;
+    }
+  }, [masterVolume]);
   const getRandomFilteredText = useCallback((chord: Chord): string | null => { /* (Unchanged) */ const possibleTexts = availableTextCategories.flatMap(cat => chord.texts[cat] || []); if (possibleTexts.length === 0) return null; return possibleTexts[Math.floor(Math.random() * possibleTexts.length)]; }, [availableTextCategories]);
   const scheduleNextLoop = useCallback((customMode?: boolean) => {
     if (useCustomChords && customMode && customChords.filter(Boolean).length === 4) {
@@ -460,7 +492,15 @@ export default function Home() {
     if (!firstText) { setCustomText("No outlines available for your selection."); stopPlayback(); return; }
     playChord(firstChord, firstText); scheduleNextLoop(false);
   };
-  const stopPlayback = () => { /* (Unchanged) */ setIsPlaying(false); if (loopTimeout.current) clearTimeout(loopTimeout.current); stopAllAudio(); contextRef.current?.suspend(); setCurrentChord(null); setCustomText("Select your settings and press play"); setNextText(""); lastPlayedRef.current = null; };
+  const stopPlayback = () => {
+    setIsPlaying(false);
+    if (loopTimeout.current) clearTimeout(loopTimeout.current);
+    stopAllAudio();
+    contextRef.current?.suspend();
+    // Do NOT clear currentChord or customText, just clear nextText and lastPlayedRef
+    setNextText("");
+    lastPlayedRef.current = null;
+  };
 
   // Info section state
   const [infoOpen, setInfoOpen] = useState<{ how: boolean; about: boolean; join: boolean; updates: boolean; coming: boolean }>({ how: false, about: false, join: false, updates: false, coming: false });
@@ -495,14 +535,14 @@ export default function Home() {
         }
       `}</style>
       <Head>
-        <title>Solo Lab – A Jazz Improv Practice App by Oren Levanon</title>
+        <title>Solo Lab – Take your solos to the next level</title>
         <meta name="description" content="Solo Lab is a jazz improvisation app by Oren Levanon. Practice with real audio loops, chord suggestions, and interactive tools." />
         <meta name="google-site-verification" content="Dw0POM0c9pK2tUz5qtvH7AVQCARu6LTOj3Tv9m0egPg" />
         <meta name="google-site-verification" content="3z8xpO8BRjBkyfdiQ7hhpSS3KDxCRmcvhJprI76Gcbk" />
       </Head>
       <div style={styles.container}>
         <header style={styles.header}>
-            <h1 style={styles.headerTitle}>Solo Lab - v1.1</h1>
+            <h1 style={styles.headerTitle}>Solo Lab</h1>
             <p style={styles.headerSubtitle}>Take your solos to the next level.</p>
         </header>
         <main className="mainContent-responsive" style={styles.mainContent}>
@@ -518,10 +558,6 @@ export default function Home() {
                 About <span style={styles.accordionArrow}>{infoOpen.about ? '▲' : '▼'}</span>
               </button>
               {infoOpen.about && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{aboutText}</pre></div>}
-              <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, join: !o.join}))}>
-                Join The Development <span style={styles.accordionArrow}>{infoOpen.join ? '▲' : '▼'}</span>
-              </button>
-              {infoOpen.join && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{joinText}</pre></div>}
               {/* === UPDATES TAB === */}
               <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, updates: !o.updates}))}>
                 Updates <span style={styles.accordionArrow}>{infoOpen.updates ? '▲' : '▼'}</span>
@@ -532,14 +568,37 @@ export default function Home() {
                 Coming Soon <span style={styles.accordionArrow}>{infoOpen.coming ? '▲' : '▼'}</span>
               </button>
               {infoOpen.coming && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{comingSoonText}</pre></div>}
+              {/* === JOIN THE DEVELOPMENT TAB (moved to bottom) === */}
+              <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, join: !o.join}))}>
+                Join The Development <span style={styles.accordionArrow}>{infoOpen.join ? '▲' : '▼'}</span>
+              </button>
+              {infoOpen.join && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{joinText}</pre></div>}
             </div>
           </div>
           {/* === END INFO SECTION === */}
           {/* Main display and controls */}
           <div className="displayCard-responsive" style={{...styles.card, ...styles.displayCard, ...styles.equalHeightCard}}>
-                <div style={styles.chordDisplay}><p style={styles.chordLabel}>Current Chord</p><p style={styles.chordName}>{currentChord?.name || "—"}</p></div>
+                <div style={{...styles.chordDisplay, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+                  <p style={styles.chordLabel}>Current Chord</p>
+                  <p style={styles.chordName}>{currentChord?.name || "—"}</p>
+                </div>
                 <div style={styles.outlineDisplay}><p style={styles.outlineLabel}>Outline</p><p style={styles.outlineText}>{customText}</p></div>
                 <div style={styles.nextUpDisplay}><p style={styles.nextUpText}>Next: {nextText || "—"}</p></div>
+                {/* === MASTER VOLUME KNOB (UNDER NEXT CHORD) === */}
+                <div style={{ marginTop: 24, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <label htmlFor="master-volume-knob" style={{ color: colors.textMuted, fontWeight: 500, marginBottom: 4 }}>Master Volume</label>
+                  <input
+                    id="master-volume-knob"
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={masterVolume}
+                    onChange={e => setMasterVolume(Number(e.target.value))}
+                    style={{ width: 180, accentColor: colors.primaryAccent }}
+                  />
+                </div>
+                {/* === END MASTER VOLUME KNOB === */}
             </div>
             <div className="controlsCard-responsive" style={{...styles.card, ...styles.controlsCard, ...styles.equalHeightCard}}>
                 <h2 style={styles.settingsTitle}>Settings</h2>
@@ -671,12 +730,41 @@ const styles: Record<string, React.CSSProperties> = {
   chordDisplay: { textAlign: 'center' },
   chordLabel: { margin: 0, color: colors.textMuted, fontSize: '1rem' },
   // UPDATED: color changed to white (colors.text)
-  chordName: { margin: '5px 0', fontSize: 'clamp(3rem, 10vw, 5rem)', fontWeight: 700, color: colors.text, lineHeight: 1.1 },
-  outlineDisplay: { backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '20px', textAlign: 'center', minHeight: '100px', display: 'flex', flexDirection: 'column', justifyContent: 'center' },
+  chordName: { margin: '5px 0', fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: 700, color: colors.text, lineHeight: 1.1 },
+  outlineDisplay: {
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: '12px',
+    padding: '32px',
+    textAlign: 'center',
+    minHeight: '160px',
+    maxHeight: '220px',
+    height: '200px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+    margin: '0 auto',
+    width: '100%',
+  },
   outlineLabel: { margin: 0, color: colors.textMuted, fontSize: '0.9rem', fontWeight: 500 },
-  outlineText: { margin: '8px 0 0', fontSize: '1.5rem', fontWeight: 600, color: colors.text, fontStyle: 'italic' },
+  outlineText: {
+    margin: '12px 0 0',
+    fontSize: '1.5rem',
+    fontWeight: 800,
+    color: colors.text,
+    fontStyle: 'italic',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'pre-line',
+    wordBreak: 'break-word',
+    maxHeight: '120px',
+    lineHeight: 1.18,
+    display: 'block',
+  },
   nextUpDisplay: { textAlign: 'center', paddingTop: '10px', borderTop: `1px solid ${colors.border}` },
-  nextUpText: { margin: 0, color: colors.textMuted, fontStyle: 'italic' },
+  nextUpText: { margin: 0, color: colors.textMuted, fontStyle: 'italic', fontWeight: 600 },
   // UPDATED: color changed to white (colors.text)
   settingsTitle: { margin: '0 0 25px 0', textAlign: 'center', color: colors.text, fontWeight: 600 },
   settingGroup: { marginBottom: '20px' },
