@@ -38,7 +38,7 @@ const CHORDS: Chord[] = [
         "Bmin add4"
       ],
       pentatonics: ["Cmaj pentatonic", "Dmaj pentatonic", "Emin pentatonic", "Gmaj pentatonic", "Bmin pentatonic"],
-      pairs: ["Cmaj / Dmaj", "Bmin / Cmaj", "Dmaj / Emin"]
+      pairs: ["Cmaj + Dmaj", "Bmin + Cmaj", "Dmaj + Emin"]
     }
   },
   {
@@ -72,7 +72,7 @@ const CHORDS: Chord[] = [
         "Ebmaj add4"
       ],
       pentatonics: ["Abmin6 pentatonic", "Dbmaj pentatonic", "Ebmaj pentatonic"],
-      pairs: ["Abmin / Bbmin", "Dbmaj / Ebmaj", "Abmin / Gdim"]
+      pairs: ["Abmin + Bbmin", "Dbmaj + Ebmaj", "Abmin + Gdim"]
     }
   },
   {
@@ -104,7 +104,7 @@ const CHORDS: Chord[] = [
         "Emin6"
       ],
       pentatonics: ["Bb7b9 pentatonic", "Db7b9 pentatonic", "E7b9 pentatonic"],
-      pairs: ["Triad pairs: Gmaj / Dbmaj", "Gmaj / Dbmin", "Gmaj / Bbmin", "Emaj / Bbmin"]
+      pairs: ["Triad pairs: Gmaj + Dbmaj", "Gmaj + Dbmin", "Gmaj + Bbmin", "Emaj + Bbmin"]
     }
   },
   {
@@ -139,7 +139,7 @@ const CHORDS: Chord[] = [
         "Bbmaj add4"
       ],
       pentatonics: ["Cmin pentatonic", "Dmin pentatonic", "Gmin pentatonic"],
-      pairs: ["Cmin / Dmin", "Dmin / Ebmaj", "Ebmaj / Fmaj"]
+      pairs: ["Cmin + Dmin", "Dmin + Ebmaj", "Ebmaj + Fmaj"]
     }
   },
   {
@@ -173,7 +173,7 @@ const CHORDS: Chord[] = [
         "Gmin add4"
       ],
       pentatonics: ["Abmaj pentatonic", "Bbmaj pentatonic", "Cmin pentatonic", "Ebmaj pentatonic", "Gmin pentatonic"],
-      pairs: ["Abmaj / Bbmaj", "Gmin / Abmaj", "Bbmaj / Cmin"]
+      pairs: ["Abmaj + Bbmaj", "Gmin + Abmaj", "Bbmaj + Cmin"]
     }
   },
   {
@@ -206,7 +206,7 @@ const CHORDS: Chord[] = [
         "Emin add4"
       ],
       pentatonics: ["Fmaj pentatonic", "Gmaj pentatonic", "Amin pentatonic", "Dmin pentatonic", "Emin pentatonic"],
-      pairs: ["Fmaj / Gmaj", "Fmaj / Emin", "Cmaj / Dmin"]
+      pairs: ["Fmaj + Gmaj", "Fmaj + Emin", "Cmaj + Dmin"]
     }
   },
   {
@@ -241,7 +241,7 @@ const CHORDS: Chord[] = [
         "Cmaj add4"
       ],
       pentatonics: ["Dmin pentatonic", "Emin pentatonic", "Fmaj pentatonic", "Gmaj pentatonic", "Amin pentatonic"],
-      pairs: ["Dmin / Emin", "Fmaj / Emin", "Gmaj / Amin"]
+      pairs: ["Dmin + Emin", "Fmaj + Emin", "Gmaj + Amin"]
     }
   },
   {
@@ -276,7 +276,7 @@ const CHORDS: Chord[] = [
         "Ebmaj add4"
       ],
       pentatonics: ["Fmin pentatonic", "Gmin pentatonic", "Abmaj pentatonic", "Bbmaj pentatonic", "Cmin pentatonic"],
-      pairs: ["Fmin / Gmin", "Abmaj / Bbmaj", "Bbmaj / Cmin"]
+      pairs: ["Fmin + Gmin", "Abmaj + Bbmaj", "Bbmaj + Cmin"]
     }
   },
   {
@@ -308,7 +308,7 @@ const CHORDS: Chord[] = [
         "Bmaj6"
       ],
       pentatonics: ["F7b9 pentatonic", "Ab7b9 pentatonic", "B7b9 pentatonic"],
-      pairs: ["Triad pairs: Dmaj / Abmaj", "Dmaj / Abmin", "Dmaj / Fmin", "Bmaj / Fmin"]
+      pairs: ["Triad pairs: Dmaj + Abmaj", "Dmaj + Abmin", "Dmaj + Fmin", "Bmaj + Fmin"]
     }
   }
 ];
@@ -365,28 +365,47 @@ export default function Home() {
   }
 
   const contextRef = useRef<AudioContext | null>(null);
-  const gainNodeRef = useRef<GainNode | null>(null);
+  // Individual gain nodes for each sound type
+  const masterGainRef = useRef<GainNode | null>(null);
+  const guitarGainRef = useRef<GainNode | null>(null);
+  const bassGainRef = useRef<GainNode | null>(null);
+  const drumsGainRef = useRef<GainNode | null>(null);
   const bufferRefs = useRef<Record<string, AudioBuffer>>({});
   const currentSources = useRef<AudioBufferSourceNode[]>([]);
   const loopTimeout = useRef<NodeJS.Timeout | null>(null);
   const lastPlayedRef = useRef<{ chordName: string; text: string } | null>(null);
   const [masterVolume, setMasterVolume] = useState(0.8);
+  const [guitarVolume, setGuitarVolume] = useState(0.8);
+  const [bassVolume, setBassVolume] = useState(0.8);
+  const [drumsVolume, setDrumsVolume] = useState(0.8);
   const availableChords = useMemo(() => CHORDS.filter(chord => chordFilters[chord.type]), [chordFilters]);
   const availableTextCategories = useMemo(() => Object.keys(textFilters).filter(key => textFilters[key as TextCategory]) as TextCategory[], [textFilters]);
   
   useEffect(() => {
     if (typeof window === "undefined") return; // Prevents running on server
-    // Audio initialization... unchanged
+    // Audio initialization with individual gain nodes
     const initAudio = async () => {
-      // Fix for no-explicit-any: use unknown instead of any
       const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       const context = new AudioContextClass();
       contextRef.current = context;
       // Create master gain node
-      const gainNode = context.createGain();
-      gainNode.gain.value = 0.8;
-      gainNode.connect(context.destination);
-      gainNodeRef.current = gainNode;
+      const masterGain = context.createGain();
+      masterGain.gain.value = 0.8;
+      masterGain.connect(context.destination);
+      masterGainRef.current = masterGain;
+      // Create individual gain nodes
+      const guitarGain = context.createGain();
+      guitarGain.gain.value = 0.8;
+      guitarGain.connect(masterGain);
+      guitarGainRef.current = guitarGain;
+      const bassGain = context.createGain();
+      bassGain.gain.value = 0.8;
+      bassGain.connect(masterGain);
+      bassGainRef.current = bassGain;
+      const drumsGain = context.createGain();
+      drumsGain.gain.value = 0.8;
+      drumsGain.connect(masterGain);
+      drumsGainRef.current = drumsGain;
       const allFiles = new Set<string>(["drumgroove_135.wav"]);
       CHORDS.forEach(c => { allFiles.add(c.audioFile); if (c.bassFile) allFiles.add(c.bassFile); });
       await Promise.all(
@@ -410,19 +429,36 @@ export default function Home() {
   const stopAllAudio = () => { currentSources.current.forEach(src => { try { src.stop(); } catch { } }); currentSources.current = []; };
   const playChord = useCallback((chord: Chord, text: string) => {
     const context = contextRef.current;
-    const gainNode = gainNodeRef.current;
-    if (!context || !gainNode) return;
+    if (!context || !masterGainRef.current || !guitarGainRef.current || !bassGainRef.current || !drumsGainRef.current) return;
     stopAllAudio();
-    ["drumgroove_135.wav", chord.audioFile, chord.bassFile].forEach(file => {
-      if (file && bufferRefs.current[file]) {
-        const src = context.createBufferSource();
-        src.buffer = bufferRefs.current[file];
-        src.loop = true;
-        src.connect(gainNode);
-        src.start();
-        currentSources.current.push(src);
-      }
-    });
+    // Connect each sound to its gain node
+    // Drums
+    if (bufferRefs.current["drumgroove_135.wav"]) {
+      const src = context.createBufferSource();
+      src.buffer = bufferRefs.current["drumgroove_135.wav"];
+      src.loop = true;
+      src.connect(drumsGainRef.current);
+      src.start();
+      currentSources.current.push(src);
+    }
+    // Guitar
+    if (chord.audioFile && bufferRefs.current[chord.audioFile]) {
+      const src = context.createBufferSource();
+      src.buffer = bufferRefs.current[chord.audioFile];
+      src.loop = true;
+      src.connect(guitarGainRef.current);
+      src.start();
+      currentSources.current.push(src);
+    }
+    // Bass
+    if (chord.bassFile && bufferRefs.current[chord.bassFile]) {
+      const src = context.createBufferSource();
+      src.buffer = bufferRefs.current[chord.bassFile];
+      src.loop = true;
+      src.connect(bassGainRef.current);
+      src.start();
+      currentSources.current.push(src);
+    }
     setCurrentChord(chord);
     setCustomText(text);
     setNextText("...");
@@ -430,10 +466,12 @@ export default function Home() {
   }, []);
   // Update gain node when masterVolume changes
   useEffect(() => {
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = masterVolume;
-    }
-  }, [masterVolume]);
+    // Update all gain nodes when volumes change
+    if (masterGainRef.current) masterGainRef.current.gain.value = masterVolume;
+    if (guitarGainRef.current) guitarGainRef.current.gain.value = guitarVolume;
+    if (bassGainRef.current) bassGainRef.current.gain.value = bassVolume;
+    if (drumsGainRef.current) drumsGainRef.current.gain.value = drumsVolume;
+  }, [masterVolume, guitarVolume, bassVolume, drumsVolume]);
   const getRandomFilteredText = useCallback((chord: Chord): string | null => { /* (Unchanged) */ const possibleTexts = availableTextCategories.flatMap(cat => chord.texts[cat] || []); if (possibleTexts.length === 0) return null; return possibleTexts[Math.floor(Math.random() * possibleTexts.length)]; }, [availableTextCategories]);
   const scheduleNextLoop = useCallback((customMode?: boolean) => {
     if (useCustomChords && customMode && customChords.filter(Boolean).length === 4) {
@@ -583,22 +621,70 @@ export default function Home() {
                   <p style={styles.chordName}>{currentChord?.name || "—"}</p>
                 </div>
                 <div style={styles.outlineDisplay}><p style={styles.outlineLabel}>Outline</p><p style={styles.outlineText}>{customText}</p></div>
-                <div style={styles.nextUpDisplay}><p style={styles.nextUpText}>Next: {nextText || "—"}</p></div>
-                {/* === MASTER VOLUME KNOB (UNDER NEXT CHORD) === */}
-                <div style={{ marginTop: 24, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <label htmlFor="master-volume-knob" style={{ color: colors.textMuted, fontWeight: 500, marginBottom: 4 }}>Master Volume</label>
-                  <input
-                    id="master-volume-knob"
-                    type="range"
-                    min={0}
-                    max={1}
-                    step={0.01}
-                    value={masterVolume}
-                    onChange={e => setMasterVolume(Number(e.target.value))}
-                    style={{ width: 180, accentColor: colors.primaryAccent }}
-                  />
+                <div style={styles.nextUpDisplay}>
+                  <p style={styles.nextUpText}>Next: {nextText || "—"}</p>
+                  <div style={{ borderTop: '1px solid #444', width: '100%', margin: '10px 0 0 0' }} />
                 </div>
-                {/* === END MASTER VOLUME KNOB === */}
+                {/* === MIXER VOLUME CONTROLS === */}
+                <div style={{ marginTop: 8, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <div style={{ fontWeight: 700, fontSize: '1.15rem', color: colors.text, marginBottom: 4 }}>Volume</div>
+                  <div style={{ display: 'flex', flexDirection: 'row', gap: 18, justifyContent: 'center', alignItems: 'flex-end', width: '100%' }}>
+                    {/* True vertical sliders: label at bottom, slider above, rotated -90deg, closer together */}
+                    <div style={{ display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', height: 120 }}>
+                      <label htmlFor="master-volume-knob" style={{ color: '#fff', fontWeight: 500, marginTop: 28 }}>Master</label>
+                      <input
+                        id="master-volume-knob"
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={masterVolume}
+                        onChange={e => setMasterVolume(Number(e.target.value))}
+                        style={{ width: 80, height: 24, accentColor: '#fff', background: '#fff', borderRadius: 8, border: '1px solid #fff', transform: 'rotate(-90deg)' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', height: 120 }}>
+                      <label htmlFor="guitar-volume-knob" style={{ color: '#fff', fontWeight: 500, marginTop: 28 }}>Guitar</label>
+                      <input
+                        id="guitar-volume-knob"
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={guitarVolume}
+                        onChange={e => setGuitarVolume(Number(e.target.value))}
+                        style={{ width: 80, height: 24, accentColor: '#fff', background: '#fff', borderRadius: 8, border: '1px solid #fff', transform: 'rotate(-90deg)' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', height: 120 }}>
+                      <label htmlFor="bass-volume-knob" style={{ color: '#fff', fontWeight: 500, marginTop: 28 }}>Bass</label>
+                      <input
+                        id="bass-volume-knob"
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={bassVolume}
+                        onChange={e => setBassVolume(Number(e.target.value))}
+                        style={{ width: 80, height: 24, accentColor: '#fff', background: '#fff', borderRadius: 8, border: '1px solid #fff', transform: 'rotate(-90deg)' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column-reverse', alignItems: 'center', height: 120 }}>
+                      <label htmlFor="drums-volume-knob" style={{ color: '#fff', fontWeight: 500, marginTop: 28 }}>Drums</label>
+                      <input
+                        id="drums-volume-knob"
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={drumsVolume}
+                        onChange={e => setDrumsVolume(Number(e.target.value))}
+                        style={{ width: 80, height: 24, accentColor: '#fff', background: '#fff', borderRadius: 8, border: '1px solid #fff', transform: 'rotate(-90deg)' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                {/* === END MIXER VOLUME CONTROLS === */}
             </div>
             <div className="controlsCard-responsive" style={{...styles.card, ...styles.controlsCard, ...styles.equalHeightCard}}>
                 <h2 style={styles.settingsTitle}>Settings</h2>
