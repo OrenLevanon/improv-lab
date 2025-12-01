@@ -1,5 +1,8 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+﻿import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import Head from 'next/head';
+import TranscriptModal from '../components/TranscriptModal';
+import supabase from '../lib/supabaseClient';
+import useAuth from '../lib/useAuth';
 
 // === TYPE DEFINITIONS (Unchanged) ===
 type ChordType = 'maj7' | 'min7' | 'dom7';
@@ -343,7 +346,50 @@ function MultiSelectDropdown<T extends string>({ options, selected, onChange, la
   return ( <div ref={wrapperRef} style={styles.selectWrapper}> <button style={styles.selectButton} onClick={() => setIsOpen(!isOpen)}> {getButtonText()} <span style={{...styles.selectArrow, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'}}>▼</span> </button> {isOpen && ( <ul style={styles.selectDropdown}> <li style={styles.selectOption} onClick={handleSelectAll}> <div style={styles.checkbox} data-checked={allSelected}>✓</div>Select All </li> {options.map(option => ( <li key={option.value} style={styles.selectOption} onClick={() => onChange({ ...selected, [option.value]: !selected[option.value] })}> <div style={styles.checkbox} data-checked={!!selected[option.value]}>✓</div>{option.label} </li> ))} </ul> )} </div> );
 }
 
+function AuthButtons() {
+  // Use centralized auth hook to get current user + isPro
+  const { user, isPro } = useAuth();
+  const handleLogin = async () => {
+    const redirectTo = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000') + '/';
+    try {
+      // Debug logging before attempting OAuth — shows which NEXT_PUBLIC_SUPABASE_URL the client was built with
+      // eslint-disable-next-line no-console
+      console.log('[Auth] initiating signInWithOAuth; NEXT_PUBLIC_SUPABASE_URL=', process.env.NEXT_PUBLIC_SUPABASE_URL, ' redirectTo=', redirectTo);
+      await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
+    } catch (err) {
+      console.error('supabase signInWithOAuth error:', err);
+      alert('Login failed. Check console for details.');
+    }
+  };
+  const handleLogout = async () => { await supabase.auth.signOut(); };
+  const openUpgrade = () => { window.location.href = '/upgrade'; };
+  
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      {/* Show Upgrade to Pro for anyone who is NOT Pro (including logged-out users) */}
+      {!isPro && (
+        <button onClick={openUpgrade} style={{ padding: '8px 12px', borderRadius: 8, background: colors.playGreen, color: '#fff', border: 'none', cursor: 'pointer' }}>Upgrade to Pro</button>
+      )}
+
+      {!user ? (
+        <button onClick={handleLogin} style={{ padding: '8px 12px', borderRadius: 8, background: colors.primaryAccent, color: '#fff', border: 'none', cursor: 'pointer' }}>Login</button>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: colors.text, fontSize: '0.95rem' }}>{user.email}</span>
+          {/* Removed temporary Refresh button used for debugging */}
+          <button onClick={handleLogout} style={{ padding: '8px 12px', borderRadius: 8, background: '#aaa', color: '#111', border: 'none', cursor: 'pointer' }}>Logout</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
+  const { user: authUser, isPro } = useAuth();
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [playedChords, setPlayedChords] = useState<string[]>([]);
+  const [outlineChoices, setOutlineChoices] = useState<string[]>([]);
+  const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [currentChord, setCurrentChord] = useState<Chord | null>(null);
   const [customText, setCustomText] = useState<string>("Select your settings and press Start Session");
   const [nextText, setNextText] = useState<string>("");
@@ -357,6 +403,7 @@ export default function Home() {
   const customChordIndex = useRef(0);
 
   function handleCustomChordChange(idx: number, value: string) {
+    if (!isPro) { alert('Upgrade to Pro to unlock this feature.'); return; }
     setCustomChords(prev => {
       const next = [...prev];
       next[idx] = value;
@@ -378,7 +425,14 @@ export default function Home() {
   const [guitarVolume, setGuitarVolume] = useState(0.8);
   const [bassVolume, setBassVolume] = useState(0.8);
   const [drumsVolume, setDrumsVolume] = useState(0.8);
-  const availableChords = useMemo(() => CHORDS.filter(chord => chordFilters[chord.type]), [chordFilters]);
+  const availableChords = useMemo(() => {
+    let list = CHORDS.filter(chord => chordFilters[chord.type]);
+    // FREE users only get Cmaj7 and G7 variants
+    if (!isPro) {
+      list = list.filter(c => c.name === 'Cmaj7' || c.name.startsWith('G7'));
+    }
+    return list;
+  }, [chordFilters, isPro]);
   const availableTextCategories = useMemo(() => Object.keys(textFilters).filter(key => textFilters[key as TextCategory]) as TextCategory[], [textFilters]);
   
   useEffect(() => {
@@ -426,6 +480,11 @@ export default function Home() {
     initAudio();
   }, []);
 
+  // enforce FREE user limits
+  useEffect(() => {
+    if (!isPro && barsPerChord !== 8) setBarsPerChord(8);
+  }, [isPro, barsPerChord]);
+
   const stopAllAudio = () => { currentSources.current.forEach(src => { try { src.stop(); } catch { } }); currentSources.current = []; };
   const playChord = useCallback((chord: Chord, text: string) => {
     const context = contextRef.current;
@@ -463,6 +522,13 @@ export default function Home() {
     setCustomText(text);
     setNextText("...");
     lastPlayedRef.current = { chordName: chord.name, text };
+    // Track transcript entries
+    try {
+      setPlayedChords(prev => [...prev, chord.name]);
+      setOutlineChoices(prev => [...prev, text]);
+    } catch (e) {
+      // ignore
+    }
   }, []);
   // Update gain node when masterVolume changes
   useEffect(() => {
@@ -506,6 +572,7 @@ export default function Home() {
     const context = contextRef.current;
     if (isPlaying || !context) return;
     if (useCustomChords && customChords.filter(Boolean).length === 4) {
+      if (!isPro) { alert('Upgrade to Pro to unlock this feature.'); return; }
       context.resume();
       setIsPlaying(true);
       customChordIndex.current = 0;
@@ -541,12 +608,11 @@ export default function Home() {
   };
 
   // Info section state
-  const [infoOpen, setInfoOpen] = useState<{ how: boolean; about: boolean; join: boolean; updates: boolean; coming: boolean }>({ how: false, about: false, join: false, updates: false, coming: false });
+  const [infoOpen, setInfoOpen] = useState<{ how: boolean; about: boolean; updates: boolean; coming: boolean }>({ how: false, about: false, updates: false, coming: false });
 
   // Info texts
   const howToUseText = `Start by choosing how long each chord should last, which chord types you want to hear, and what kinds of sounds you want to explore using the Outline options.\n\nOnce playback begins, the current chord will be shown on screen, along with a randomly selected outlining option (like a triad or Penta) for you to play over it.\n\nGet ready for the upcoming chord — and its outlining suggestion — shown below under Next.`;
-  const aboutText = `This is the very first version of a new app I’m developing to help musicians apply many of the techniques and sounds I teach — all within a musical context.\n\nI truly believe this is a fresh and fun way to practice the fundamentals on your instrument, while exploring new sounds and enjoying the process.\nA real win–win–win.\n\nIn the future, many more chord types, keys, drum grooves, and play-along options will be added.\nMost outlining sounds will also be connected to lessons, in case you want more ideas or a deeper understanding of how to use them and how they work.\n\nWe’re at the very beginning of something I’m excited to share — and there’s much more to come.`;
-  const joinText = `I’m recording all the audio from my home studio and coding the app with AI.\nIf you’re a musician and want to contribute recordings for future play-along features, or a software developer who’s into creative tools and could help improve the app — I’d love to collaborate.\n\nJust drop me a message via the Contact page on my website or reach out on social media.`;
+  const aboutText = `Solo Lab is built to strengthen your improvisation fundamentals. You’ll practice triads, extended triads, pentatonics, and hexatonics as upper structures over different chord types, while playing along with backing tracks recorded by Oren Levanon. It keeps the practice musical, focused, and fun.`;
   const updatesText = `Solo Lab has some new chords!\nI record everything piece by piece, so it takes time—but I’ll keep adding more regularly.\nOutline chords have been edited and a few mistakes fixed.\nA custom chord section has been added.\nOnly a 4-chord loop option is available for now—but this will be expanded soon.`;
   const comingSoonText = `More drum styles and tempos, more chords,\nand the ability to click on a sound to learn more about it—\nwith teaching videos I’m making that explain how to use the sounds you like.`;
 
@@ -582,6 +648,9 @@ export default function Home() {
         <header style={styles.header}>
             <h1 style={styles.headerTitle}>Solo Lab</h1>
             <p style={styles.headerSubtitle}>Take your solos to the next level.</p>
+            <div style={{ position: 'absolute', right: 24, top: 18 }}>
+              <AuthButtons />
+            </div>
         </header>
         <main className="mainContent-responsive" style={styles.mainContent}>
           {/* === INFO SECTION === */}
@@ -603,14 +672,10 @@ export default function Home() {
               {infoOpen.updates && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{updatesText}</pre></div>}
               {/* === COMING SOON TAB === */}
               <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, coming: !o.coming}))}>
-                Coming Soon <span style={styles.accordionArrow}>{infoOpen.coming ? '▲' : '▼'}</span>
+                Support <span style={styles.accordionArrow}>{infoOpen.coming ? '▲' : '▼'}</span>
               </button>
-              {infoOpen.coming && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{comingSoonText}</pre></div>}
-              {/* === JOIN THE DEVELOPMENT TAB (moved to bottom) === */}
-              <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, join: !o.join}))}>
-                Join The Development <span style={styles.accordionArrow}>{infoOpen.join ? '▲' : '▼'}</span>
-              </button>
-              {infoOpen.join && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{joinText}</pre></div>}
+              {infoOpen.coming && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{`If you have requests, ideas, or run into any issues with Solo Lab, I’d love to hear from you — reach me at orenlevano@gmail.com`}</pre></div>}
+              {/* Join The Development tab removed */}
             </div>
           </div>
           {/* === END INFO SECTION === */}
@@ -619,6 +684,15 @@ export default function Home() {
                 <div style={{...styles.chordDisplay, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
                   <p style={styles.chordLabel}>Current Chord</p>
                   <p style={styles.chordName}>{currentChord?.name || "—"}</p>
+                  {!isPro && (
+                    <p style={{
+                      margin: '6px 0 0',
+                      color: colors.primaryAccent,
+                      fontSize: (styles.chordLabel.fontSize as string) || '1rem',
+                      fontWeight: (styles.chordLabel.fontWeight as any) ?? 400,
+                      textAlign: 'center'
+                    }}>Go Pro to unlock all chords</p>
+                  )}
                 </div>
                 <div style={styles.outlineDisplay}><p style={styles.outlineLabel}>Outline</p><p style={styles.outlineText}>{customText}</p></div>
                 <div style={styles.nextUpDisplay}>
@@ -639,8 +713,8 @@ export default function Home() {
                         max={1}
                         step={0.01}
                         value={masterVolume}
-                        onChange={e => setMasterVolume(Number(e.target.value))}
-                        onDoubleClick={() => setMasterVolume(0.8)}
+                          onChange={e => { if (!isPro) { alert('Upgrade to Pro to unlock this feature.'); return; } setMasterVolume(Number(e.target.value)); }}
+                          onDoubleClick={() => { if (!isPro) { alert('Upgrade to Pro to unlock this feature.'); return; } setMasterVolume(0.8); }}
                         style={{ width: 80, height: 24, accentColor: '#fff', background: '#fff', borderRadius: 8, border: '1px solid #fff', transform: 'rotate(-90deg)' }}
                       />
                     </div>
@@ -653,8 +727,8 @@ export default function Home() {
                         max={1}
                         step={0.01}
                         value={guitarVolume}
-                        onChange={e => setGuitarVolume(Number(e.target.value))}
-                        onDoubleClick={() => setGuitarVolume(0.8)}
+                        onChange={e => { if (!isPro) { alert('Upgrade to Pro to unlock this feature.'); return; } setGuitarVolume(Number(e.target.value)); }}
+                        onDoubleClick={() => { if (!isPro) { alert('Upgrade to Pro to unlock this feature.'); return; } setGuitarVolume(0.8); }}
                         style={{ width: 80, height: 24, accentColor: '#fff', background: '#fff', borderRadius: 8, border: '1px solid #fff', transform: 'rotate(-90deg)' }}
                       />
                     </div>
@@ -667,8 +741,8 @@ export default function Home() {
                         max={1}
                         step={0.01}
                         value={bassVolume}
-                        onChange={e => setBassVolume(Number(e.target.value))}
-                        onDoubleClick={() => setBassVolume(0.8)}
+                        onChange={e => { if (!isPro) { alert('Upgrade to Pro to unlock this feature.'); return; } setBassVolume(Number(e.target.value)); }}
+                        onDoubleClick={() => { if (!isPro) { alert('Upgrade to Pro to unlock this feature.'); return; } setBassVolume(0.8); }}
                         style={{ width: 80, height: 24, accentColor: '#fff', background: '#fff', borderRadius: 8, border: '1px solid #fff', transform: 'rotate(-90deg)' }}
                       />
                     </div>
@@ -681,8 +755,8 @@ export default function Home() {
                         max={1}
                         step={0.01}
                         value={drumsVolume}
-                        onChange={e => setDrumsVolume(Number(e.target.value))}
-                        onDoubleClick={() => setDrumsVolume(0.8)}
+                        onChange={e => { if (!isPro) { alert('Upgrade to Pro to unlock this feature.'); return; } setDrumsVolume(Number(e.target.value)); }}
+                        onDoubleClick={() => { if (!isPro) { alert('Upgrade to Pro to unlock this feature.'); return; } setDrumsVolume(0.8); }}
                         style={{ width: 80, height: 24, accentColor: '#fff', background: '#fff', borderRadius: 8, border: '1px solid #fff', transform: 'rotate(-90deg)' }}
                       />
                     </div>
@@ -696,13 +770,18 @@ export default function Home() {
                     <label style={styles.label}>Change Chord Every</label>
                     <CustomSelect<number>
                       options={[ {value: 4, label: "4 Bars"}, {value: 8, label: "8 Bars"}, {value: 16, label: "16 Bars"} ]}
-                      value={barsPerChord} onChange={setBarsPerChord}
+                      value={barsPerChord}
+                      onChange={(v: number) => {
+                        if (!isPro && v !== 8) { alert('Upgrade to Pro to unlock this feature.'); return; }
+                        setBarsPerChord(v);
+                      }}
                     />
                 </div>
                  <div style={styles.settingGroup}>
                     <label style={styles.label}>Chord Types</label>
                     <MultiSelectDropdown<ChordType>
-                        label="Types" options={CHORD_TYPE_OPTIONS} selected={chordFilters} onChange={setChordFilters}
+                      label="Types" options={CHORD_TYPE_OPTIONS} selected={chordFilters}
+                      onChange={(s) => { if (!isPro) { alert('Upgrade to Pro to unlock this feature.'); return; } setChordFilters(s); }}
                     />
                  </div>
                  <div style={styles.settingGroup}>
@@ -710,13 +789,59 @@ export default function Home() {
                     <label style={styles.label}>Outline</label>
                     {/* === UPDATED DROPDOWN CALL === */}
                     <MultiSelectDropdown<TextCategory>
-                        label="Outlines" options={TEXT_TYPE_OPTIONS} selected={textFilters} onChange={setTextFilters}
-                        allText="Select All"
+                      label="Outlines" options={TEXT_TYPE_OPTIONS} selected={textFilters}
+                      onChange={(s) => { if (!isPro) { alert('Upgrade to Pro to unlock this feature.'); return; } setTextFilters(s); }}
+                      allText="Select All"
                     />
                  </div>
-                 <button style={isPlaying ? styles.stopButton : styles.playButton} onClick={() => isPlaying ? stopPlayback() : startPlayback()}>
-                    {isPlaying ? "Stop Session" : "Start Session"}
-                </button>
+                {!isPlaying ? (
+                  <div style={{ ...styles.playButton, display: 'flex', padding: 0, gap: 0 }}>
+                    <button
+                      onClick={startPlayback}
+                      style={{
+                        flex: 1,
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#fff',
+                        padding: '15px',
+                        fontSize: '1.1rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        borderTopLeftRadius: 8,
+                        borderBottomLeftRadius: 8,
+                      }}
+                    >
+                      <span>Start Session</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!isPro) { alert('Upgrade to Pro to unlock this feature.'); return; }
+                        setTranscriptOpen(true);
+                      }}
+                      style={{
+                        flex: 1,
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#fff',
+                        padding: '15px',
+                        fontSize: '1.1rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        borderLeft: '1px solid rgba(255,255,255,0.06)',
+                        borderTopRightRadius: 8,
+                        borderBottomRightRadius: 8,
+                      }}
+                    >
+                      See Transcript
+                    </button>
+                  </div>
+                ) : (
+                  <button style={styles.stopButton} onClick={stopPlayback}>Stop Session</button>
+                )}
                 {/* === CUSTOM CHORDS SECTION === */}
                 <div style={{ marginTop: 32 }}>
                   <label style={{ fontWeight: 600, color: colors.text, fontSize: '1.1rem', marginBottom: 8, display: 'block' }}>Custom Chords</label>
@@ -746,7 +871,7 @@ export default function Home() {
                       <input
                         type="checkbox"
                         checked={useCustomChords}
-                        onChange={e => setUseCustomChords(e.target.checked)}
+                        onChange={e => { if (!isPro) { alert('Upgrade to Pro to unlock this feature.'); return; } setUseCustomChords(e.target.checked); }}
                         style={{ marginRight: 6 }}
                       />
                       Use Custom Chord Loop
@@ -756,6 +881,8 @@ export default function Home() {
                 {/* === END CUSTOM CHORDS SECTION === */}
             </div>
         </main>
+        {/* Transcript modal */}
+        <TranscriptModal open={transcriptOpen} onClose={() => setTranscriptOpen(false)} playedChords={playedChords} outlineChoices={outlineChoices} />
         {/* === EMAIL SIGNUP FORM === */}
         <EmailSignupInline />
         {/* === END EMAIL SIGNUP FORM === */}
