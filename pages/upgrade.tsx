@@ -22,29 +22,46 @@ export default function Upgrade() {
         alert('Pricing not configured. Please contact the site admin.');
         return;
       }
+      
       console.log('Initiating checkout for priceId:', priceId);
-      // If logged in, include Supabase user id; otherwise leave undefined and allow Stripe to collect email
-      const body: any = { priceId };
-      if (user?.id) body.supabaseUserId = user.id;
-      // also include email if available (helps associate)
-      if (user?.email) body.email = user.email;
+
+      // Get the current authenticated user
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser) {
+        alert('Please log in to upgrade.');
+        return;
+      }
+
+      console.log('Current user:', authUser.email, 'ID:', authUser.id);
+
+      // Build request body with all necessary data
+      const body: any = { 
+        priceId,
+        email: authUser.email,
+        supabaseUserId: authUser.id
+      };
+
+      console.log('Sending checkout request with:', { priceId, email: authUser.email, supabaseUserId: authUser.id });
 
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
+      
       console.log('create-checkout-session response status:', res.status);
       const data = await res.json();
       console.log('create-checkout-session response data:', data);
+      
       if (data.url) {
         window.location.href = data.url;
       } else {
         alert('Failed to create checkout session.');
       }
     } catch (e) {
-      console.error(e);
-      alert('Network error.');
+      console.error('Checkout error:', e);
+      alert('Network error. Please try again.');
     }
   };
 

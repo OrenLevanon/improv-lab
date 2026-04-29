@@ -386,7 +386,6 @@ function AuthButtons() {
 
 export default function Home() {
   const { user: authUser, isPro } = useAuth();
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const [playedChords, setPlayedChords] = useState<string[]>([]);
   const [outlineChoices, setOutlineChoices] = useState<string[]>([]);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
