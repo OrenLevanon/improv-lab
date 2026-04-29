@@ -326,7 +326,7 @@ const TEXT_TYPE_OPTIONS: { value: TextCategory; label: string }[] = [ { value: '
 function CustomSelect<T extends string | number>({ options, value, onChange }: { options: { value: T; label: string }[], value: T, onChange: (v: T) => void }) { /* (Unchanged) */
   const [isOpen, setIsOpen] = useState(false); const wrapperRef = useRef<HTMLDivElement>(null);
   useEffect(() => { const handleClickOutside = (e: MouseEvent) => { if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setIsOpen(false); }; document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []);
-  return ( <div ref={wrapperRef} style={styles.selectWrapper}> <button style={styles.selectButton} onClick={() => setIsOpen(!isOpen)}> {options.find(opt => opt.value === value)?.label} <span style={{...styles.selectArrow, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'}}>▼</span> </button> {isOpen && ( <ul style={styles.selectDropdown}> {options.map(option => ( <li key={String(option.value)} style={styles.selectOption} onClick={() => { onChange(option.value); setIsOpen(false); }}> {option.label} </li> ))} </ul> )} </div> );
+  return ( <div ref={wrapperRef} style={styles.selectWrapper}> <button style={styles.selectButton} onClick={() => setIsOpen(!isOpen)}> {options.find(opt => opt.value === value)?.label} <span style={{...styles.selectArrow, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'}}>?</span> </button> {isOpen && ( <ul style={styles.selectDropdown}> {options.map(option => ( <li key={String(option.value)} style={styles.selectOption} onClick={() => { onChange(option.value); setIsOpen(false); }}> {option.label} </li> ))} </ul> )} </div> );
 }
 
 // Multi-Select Dropdown (Updated)
@@ -343,7 +343,7 @@ function MultiSelectDropdown<T extends string>({ options, selected, onChange, la
 
   const handleSelectAll = () => { onChange(Object.fromEntries(options.map(opt => [opt.value, !allSelected])) as Record<T, boolean>); };
   useEffect(() => { const handleClickOutside = (e: MouseEvent) => { if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setIsOpen(false); }; document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []);
-  return ( <div ref={wrapperRef} style={styles.selectWrapper}> <button style={styles.selectButton} onClick={() => setIsOpen(!isOpen)}> {getButtonText()} <span style={{...styles.selectArrow, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'}}>▼</span> </button> {isOpen && ( <ul style={styles.selectDropdown}> <li style={styles.selectOption} onClick={handleSelectAll}> <div style={styles.checkbox} data-checked={allSelected}>✓</div>Select All </li> {options.map(option => ( <li key={option.value} style={styles.selectOption} onClick={() => onChange({ ...selected, [option.value]: !selected[option.value] })}> <div style={styles.checkbox} data-checked={!!selected[option.value]}>✓</div>{option.label} </li> ))} </ul> )} </div> );
+  return ( <div ref={wrapperRef} style={styles.selectWrapper}> <button style={styles.selectButton} onClick={() => setIsOpen(!isOpen)}> {getButtonText()} <span style={{...styles.selectArrow, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'}}>?</span> </button> {isOpen && ( <ul style={styles.selectDropdown}> <li style={styles.selectOption} onClick={handleSelectAll}> <div style={styles.checkbox} data-checked={allSelected}>?</div>Select All </li> {options.map(option => ( <li key={option.value} style={styles.selectOption} onClick={() => onChange({ ...selected, [option.value]: !selected[option.value] })}> <div style={styles.checkbox} data-checked={!!selected[option.value]}>?</div>{option.label} </li> ))} </ul> )} </div> );
 }
 
 function AuthButtons() {
@@ -352,8 +352,7 @@ function AuthButtons() {
   const handleLogin = async () => {
     const redirectTo = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000') + '/';
     try {
-      // Debug logging before attempting OAuth — shows which NEXT_PUBLIC_SUPABASE_URL the client was built with
-      // eslint-disable-next-line no-console
+      // Debug logging before attempting OAuth � shows which NEXT_PUBLIC_SUPABASE_URL the client was built with
       console.log('[Auth] initiating signInWithOAuth; NEXT_PUBLIC_SUPABASE_URL=', process.env.NEXT_PUBLIC_SUPABASE_URL, ' redirectTo=', redirectTo);
       await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
     } catch (err) {
@@ -375,7 +374,7 @@ function AuthButtons() {
         <button onClick={handleLogin} style={{ padding: '8px 12px', borderRadius: 8, background: colors.primaryAccent, color: '#fff', border: 'none', cursor: 'pointer' }}>Login</button>
       ) : (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: colors.text, fontSize: '0.95rem' }}>{user.email}</span>
+          <span style={{ color: colors.text, fontSize: '0.95rem' }}>{String((user as Record<string, unknown>)?.email)}</span>
           {/* Removed temporary Refresh button used for debugging */}
           <button onClick={handleLogout} style={{ padding: '8px 12px', borderRadius: 8, background: '#aaa', color: '#111', border: 'none', cursor: 'pointer' }}>Logout</button>
         </div>
@@ -385,7 +384,7 @@ function AuthButtons() {
 }
 
 export default function Home() {
-  const { user: authUser, isPro } = useAuth();
+  const { isPro } = useAuth();
   const [playedChords, setPlayedChords] = useState<string[]>([]);
   const [outlineChoices, setOutlineChoices] = useState<string[]>([]);
   const [transcriptOpen, setTranscriptOpen] = useState(false);
@@ -525,7 +524,7 @@ export default function Home() {
     try {
       setPlayedChords(prev => [...prev, chord.name]);
       setOutlineChoices(prev => [...prev, text]);
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, []);
@@ -610,10 +609,9 @@ export default function Home() {
   const [infoOpen, setInfoOpen] = useState<{ how: boolean; about: boolean; updates: boolean; coming: boolean }>({ how: false, about: false, updates: false, coming: false });
 
   // Info texts
-  const howToUseText = `Start by choosing how long each chord should last, which chord types you want to hear, and what kinds of sounds you want to explore using the Outline options.\n\nOnce playback begins, the current chord will be shown on screen, along with a randomly selected outlining option (like a triad or Penta) for you to play over it.\n\nGet ready for the upcoming chord — and its outlining suggestion — shown below under Next.`;
-  const aboutText = `Solo Lab is built to strengthen your improvisation fundamentals. You’ll practice triads, extended triads, pentatonics, and hexatonics as upper structures over different chord types, while playing along with backing tracks recorded by Oren Levanon. It keeps the practice musical, focused, and fun.`;
-  const updatesText = `Solo Lab has some new chords!\nI record everything piece by piece, so it takes time—but I’ll keep adding more regularly.\nOutline chords have been edited and a few mistakes fixed.\nA custom chord section has been added.\nOnly a 4-chord loop option is available for now—but this will be expanded soon.`;
-  const comingSoonText = `More drum styles and tempos, more chords,\nand the ability to click on a sound to learn more about it—\nwith teaching videos I’m making that explain how to use the sounds you like.`;
+  const howToUseText = `Start by choosing how long each chord should last, which chord types you want to hear, and what kinds of sounds you want to explore using the Outline options.\n\nOnce playback begins, the current chord will be shown on screen, along with a randomly selected outlining option (like a triad or Penta) for you to play over it.\n\nGet ready for the upcoming chord � and its outlining suggestion � shown below under Next.`;
+  const aboutText = `Solo Lab is built to strengthen your improvisation fundamentals. You�ll practice triads, extended triads, pentatonics, and hexatonics as upper structures over different chord types, while playing along with backing tracks recorded by Oren Levanon. It keeps the practice musical, focused, and fun.`;
+  const updatesText = `Solo Lab has some new chords!\nI record everything piece by piece, so it takes time�but I�ll keep adding more regularly.\nOutline chords have been edited and a few mistakes fixed.\nA custom chord section has been added.\nOnly a 4-chord loop option is available for now�but this will be expanded soon.`;
 
   return (
     <>
@@ -638,7 +636,7 @@ export default function Home() {
         }
       `}</style>
       <Head>
-        <title>Solo Lab – Take your solos to the next level</title>
+        <title>Solo Lab � Take your solos to the next level</title>
         <meta name="description" content="Solo Lab is a jazz improvisation app by Oren Levanon. Practice with real audio loops, chord suggestions, and interactive tools." />
         <meta name="google-site-verification" content="Dw0POM0c9pK2tUz5qtvH7AVQCARu6LTOj3Tv9m0egPg" />
         <meta name="google-site-verification" content="3z8xpO8BRjBkyfdiQ7hhpSS3KDxCRmcvhJprI76Gcbk" />
@@ -657,23 +655,23 @@ export default function Home() {
             <h2 style={styles.infoTitle}>Info</h2>
             <div style={styles.accordionGroup}>
               <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, how: !o.how}))}>
-                How To Use <span style={styles.accordionArrow}>{infoOpen.how ? '▲' : '▼'}</span>
+                How To Use <span style={styles.accordionArrow}>{infoOpen.how ? '?' : '?'}</span>
               </button>
               {infoOpen.how && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{howToUseText}</pre></div>}
               <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, about: !o.about}))}>
-                About <span style={styles.accordionArrow}>{infoOpen.about ? '▲' : '▼'}</span>
+                About <span style={styles.accordionArrow}>{infoOpen.about ? '?' : '?'}</span>
               </button>
               {infoOpen.about && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{aboutText}</pre></div>}
               {/* === UPDATES TAB === */}
               <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, updates: !o.updates}))}>
-                Updates <span style={styles.accordionArrow}>{infoOpen.updates ? '▲' : '▼'}</span>
+                Updates <span style={styles.accordionArrow}>{infoOpen.updates ? '?' : '?'}</span>
               </button>
               {infoOpen.updates && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{updatesText}</pre></div>}
               {/* === COMING SOON TAB === */}
               <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, coming: !o.coming}))}>
-                Support <span style={styles.accordionArrow}>{infoOpen.coming ? '▲' : '▼'}</span>
+                Support <span style={styles.accordionArrow}>{infoOpen.coming ? '?' : '?'}</span>
               </button>
-              {infoOpen.coming && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{`If you have requests, ideas, or run into any issues with Solo Lab, I’d love to hear from you — reach me at orenlevano@gmail.com`}</pre></div>}
+              {infoOpen.coming && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{`If you have requests, ideas, or run into any issues with Solo Lab, I�d love to hear from you � reach me at orenlevano@gmail.com`}</pre></div>}
               {/* Join The Development tab removed */}
             </div>
           </div>
@@ -682,20 +680,20 @@ export default function Home() {
           <div className="displayCard-responsive" style={{...styles.card, ...styles.displayCard, ...styles.equalHeightCard}}>
                 <div style={{...styles.chordDisplay, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
                   <p style={styles.chordLabel}>Current Chord</p>
-                  <p style={styles.chordName}>{currentChord?.name || "—"}</p>
+                  <p style={styles.chordName}>{currentChord?.name || "�"}</p>
                   {!isPro && (
                     <p style={{
                       margin: '6px 0 0',
                       color: colors.primaryAccent,
                       fontSize: (styles.chordLabel.fontSize as string) || '1rem',
-                      fontWeight: (styles.chordLabel.fontWeight as any) ?? 400,
+                      fontWeight: (styles.chordLabel.fontWeight as number) ?? 400,
                       textAlign: 'center'
                     }}>Go Pro to unlock all chords</p>
                   )}
                 </div>
                 <div style={styles.outlineDisplay}><p style={styles.outlineLabel}>Outline</p><p style={styles.outlineText}>{customText}</p></div>
                 <div style={styles.nextUpDisplay}>
-                  <p style={styles.nextUpText}>Next: {nextText || "—"}</p>
+                  <p style={styles.nextUpText}>Next: {nextText || "�"}</p>
                   <div style={{ borderTop: '1px solid #444', width: '100%', margin: '10px 0 0 0' }} />
                 </div>
                 {/* === MIXER VOLUME CONTROLS === */}
@@ -885,7 +883,7 @@ export default function Home() {
         {/* === EMAIL SIGNUP FORM === */}
         <EmailSignupInline />
         {/* === END EMAIL SIGNUP FORM === */}
-        <footer style={styles.footer}><p style={styles.infoText}>©
+        <footer style={styles.footer}><p style={styles.infoText}>�
 2025 Oren
 Levanon / Solo
 Lab. All rights reserved.</p></footer>
@@ -1142,7 +1140,7 @@ function EmailSignupInline() {
         Notify Me
       </button>
       {status === 'success' && (
-        <span style={{ color: '#4CAF50', fontWeight: 500, marginLeft: 10 }}>Thank you! You’ll be notified.</span>
+        <span style={{ color: '#4CAF50', fontWeight: 500, marginLeft: 10 }}>Thank you! You�ll be notified.</span>
       )}
       {status === 'error' && (
         <span style={{ color: '#f44336', fontWeight: 500, marginLeft: 10 }}>{error}</span>

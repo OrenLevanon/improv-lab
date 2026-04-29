@@ -1,19 +1,12 @@
 import React from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
-import styles from '../styles/placeholder.module.css';
 import supabase from '../lib/supabaseClient';
-import useAuth from '../lib/useAuth';
 
   // Read price IDs from env (public). Provide sensible fallbacks if missing.
   const MONTHLY_PRICE_ID = process.env.NEXT_PUBLIC_MONTHLY_PRICE_ID ?? 'price_1SVaveR0HwyCDF23I8UloDkQ';
   const YEARLY_PRICE_ID = process.env.NEXT_PUBLIC_YEARLY_PRICE_ID ?? 'price_1SVazBR0HwyCDF23TPFn7RgV';
-const domain = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 export default function Upgrade() {
-  const router = useRouter();
-
-  const { user } = useAuth();
 
   const createCheckout = async (priceId?: string) => {
     try {
@@ -36,7 +29,7 @@ export default function Upgrade() {
       console.log('Current user:', authUser.email, 'ID:', authUser.id);
 
       // Build request body with all necessary data
-      const body: any = { 
+      const body: Record<string, unknown> = { 
         priceId,
         email: authUser.email,
         supabaseUserId: authUser.id

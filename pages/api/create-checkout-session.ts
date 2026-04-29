@@ -37,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Include Supabase user ID in metadata and client_reference_id
     if (supabaseUserId) {
       params.metadata = { user_id: supabaseUserId };
-      (params as any).client_reference_id = supabaseUserId;
+      (params as Record<string, unknown>).client_reference_id = supabaseUserId;
       console.log('Checkout metadata.user_id:', supabaseUserId);
     } else {
       console.warn('No supabaseUserId provided to checkout');

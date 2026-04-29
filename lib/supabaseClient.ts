@@ -27,6 +27,6 @@ try {
 		// eslint-disable-next-line no-console
 		console.log('[supabaseClient] using NEXT_PUBLIC_SUPABASE_URL (client):', process.env.NEXT_PUBLIC_SUPABASE_URL);
 	}
-} catch (e) {
+} catch {
 	// swallow any errors in logging
 }

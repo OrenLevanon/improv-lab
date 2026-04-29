@@ -1,14 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { buffer } from 'micro';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 export const config = { api: { bodyParser: false } };
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2025-11-17.clover' });
 
 // Helper function to update Supabase profile
-async function updateUserProfile(userId: string, supabaseAdmin: any): Promise<boolean> {
+async function updateUserProfile(userId: string, supabaseAdmin: SupabaseClient): Promise<boolean> {
   try {
     const { error } = await supabaseAdmin
       .from('profiles')
@@ -53,7 +53,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Read raw body for signature verification
-    const buf = await buffer(req as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buf = await buffer(req as unknown as any);
     const sig = req.headers['stripe-signature'] as string | undefined;
 
     if (!sig) {
@@ -89,7 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(200).json({ received: true, warning: 'No user_id in metadata' });
       }
 
-      const success = await updateUserProfile(userId, supabaseAdmin);
+      const success = await updateUserProfile(userId as string, supabaseAdmin);
       if (!success) {
         return res.status(500).json({ error: 'Failed to update profile' });
       }
@@ -106,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let userId: string | undefined;
 
       // Try to get user_id from invoice metadata first
-      userId = (invoice.metadata as any)?.user_id;
+      userId = (invoice.metadata as Record<string, unknown>)?.user_id as string | undefined;
       console.log('[Stripe Webhook] Invoice metadata.user_id:', userId);
 
       // If not found, try to get from subscription (via lines[0])
@@ -115,7 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const subscriptionId = invoice.lines.data[0].subscription as string;
           if (subscriptionId) {
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-            userId = (subscription.metadata as any)?.user_id;
+            userId = (subscription.metadata as Record<string, unknown>)?.user_id as string | undefined;
             console.log('[Stripe Webhook] Subscription metadata.user_id:', userId);
           }
         } catch (err) {
@@ -128,7 +129,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         try {
           const customer = await stripe.customers.retrieve(invoice.customer as string);
           if (customer && 'metadata' in customer) {
-            userId = (customer.metadata as any)?.user_id;
+            userId = (customer.metadata as Record<string, unknown>)?.user_id as string | undefined;
             console.log('[Stripe Webhook] Customer metadata.user_id:', userId);
           }
         } catch (err) {

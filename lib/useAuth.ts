@@ -24,14 +24,14 @@ async function fetchUserProfile(userId: string): Promise<{ is_pro: boolean } | n
 }
 
 export default function useAuth() {
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<Record<string, unknown> | null>(null);
   const [isPro, setIsPro] = useState(false);
 
   useEffect(() => {
     let mounted = true;
     
     const initAuth = async () => {
-      const { data }: any = await supabase.auth.getSession();
+      const { data } = await supabase.auth.getSession() as { data: { session: { user: Record<string, unknown> } | null } | null };
       if (!mounted) return;
       
       const u = data?.session?.user ?? null;
@@ -60,7 +60,7 @@ export default function useAuth() {
 
     initAuth().catch(() => {});
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event: string, session: any) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event: string, session: Record<string, unknown> | null) => {
       if (!mounted) return;
       
       const u = session?.user ?? null;

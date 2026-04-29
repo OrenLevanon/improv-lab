@@ -10,7 +10,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '20
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).send('Method not allowed');
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
-  const buf = await buffer(req as any);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const buf = await buffer(req as unknown as any);
   const sig = req.headers['stripe-signature'] as string | undefined;
   let event: Stripe.Event;
   try {
@@ -42,8 +43,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         } else {
           const supabase = createClient(supabaseUrl, supabaseServiceKey);
           try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let userRecord: any = null;
             // If checkout session included user_id, try to find by id
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const supabaseUserId = (session.metadata as any)?.user_id || null;
             if (supabaseUserId) {
               const { data, error } = await supabase.auth.admin.getUserById(supabaseUserId);
@@ -53,6 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             if (!userRecord && email) {
               const list = await supabase.auth.admin.listUsers();
               if (list.data && Array.isArray(list.data.users)) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 userRecord = list.data.users.find((u: any) => u.email === email) || null;
               }
             }
@@ -64,6 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                   if (userRecord) {
                     // Update metadata with subscription info and stripe ids + period start/end
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const updates: any = { subscriptionStatus: 'pro', plan };
                     if (session.customer) updates.stripeCustomerId = session.customer as string;
                     if (subscriptionId) updates.stripeSubscriptionId = subscriptionId;
@@ -71,15 +76,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     if (subscriptionId) {
                       try {
                         const sub = await stripe.subscriptions.retrieve(subscriptionId);
-                        const psValue = (sub as any).current_period_start;
-                        const peValue = (sub as any).current_period_end;
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const psValue = (sub as any).current_period_start as number;
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const peValue = (sub as any).current_period_end as number;
                         if (psValue) updates.period_start = new Date(psValue * 1000).toISOString();
                         if (peValue) updates.period_end = new Date(peValue * 1000).toISOString();
                       } catch (e) {
                         console.warn('Could not retrieve subscription period info:', e);
                       }
                     }
-                    await supabase.auth.admin.updateUserById(userRecord.id, { user_metadata: updates });
+                    await supabase.auth.admin.updateUserById(userRecord.id as string, { user_metadata: updates });
                     console.log('Updated/created Supabase user for', email || userRecord.id);
                   } else {
                     console.warn('Could not find or create Supabase user for', email);
