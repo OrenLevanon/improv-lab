@@ -10,14 +10,12 @@ async function fetchUserProfile(userId: string): Promise<{ is_pro: boolean } | n
       .single();
 
     if (error) {
-      // eslint-disable-next-line no-console
       console.error('[useAuth] Error fetching profile:', error);
       return null;
     }
 
     return data;
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error('[useAuth] Exception fetching profile:', e);
     return null;
   }
@@ -36,20 +34,21 @@ export default function useAuth() {
       
       const u = data?.session?.user ?? null;
       setUser(u);
-      
-      if (u?.id) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (u && typeof u === 'object' && 'id' in u && typeof (u as any).id === 'string') {
         // Try to fetch is_pro from profiles table first
-        const profile = await fetchUserProfile(u.id);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const profile = await fetchUserProfile((u as any).id);
         if (mounted) {
           if (profile !== null) {
-            // eslint-disable-next-line no-console
             console.log('[useAuth] Session user:', u?.email, 'is_pro from profiles:', profile.is_pro);
             setIsPro(profile.is_pro);
           } else {
             // Fallback to metadata if profile fetch fails
-            const role = u?.app_metadata?.role ?? u?.user_metadata?.subscriptionStatus;
-            // eslint-disable-next-line no-console
-            console.log('[useAuth] Session user:', u?.email, 'role from metadata:', role);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const role = (u as any)?.app_metadata?.role ?? (u as any)?.user_metadata?.subscriptionStatus;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            console.log('[useAuth] Session user:', (u as any)?.email, 'role from metadata:', role);
             setIsPro(role === 'pro');
           }
         }
@@ -60,25 +59,27 @@ export default function useAuth() {
 
     initAuth().catch(() => {});
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event: string, session: Record<string, unknown> | null) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event: string, session: any) => {
       if (!mounted) return;
       
       const u = session?.user ?? null;
       setUser(u);
-      
-      if (u?.id) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (u && typeof u === 'object' && 'id' in u && typeof (u as any).id === 'string') {
         // Try to fetch is_pro from profiles table first
-        const profile = await fetchUserProfile(u.id);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const profile = await fetchUserProfile((u as any).id);
         if (mounted) {
           if (profile !== null) {
-            // eslint-disable-next-line no-console
             console.log('[useAuth] Auth state changed, user:', u?.email, 'is_pro from profiles:', profile.is_pro);
             setIsPro(profile.is_pro);
           } else {
             // Fallback to metadata if profile fetch fails
-            const role = u?.app_metadata?.role ?? u?.user_metadata?.subscriptionStatus;
-            // eslint-disable-next-line no-console
-            console.log('[useAuth] Auth state changed, user:', u?.email, 'role from metadata:', role);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const role = (u as any)?.app_metadata?.role ?? (u as any)?.user_metadata?.subscriptionStatus;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            console.log('[useAuth] Auth state changed, user:', (u as any)?.email, 'role from metadata:', role);
             setIsPro(role === 'pro');
           }
         }
@@ -101,18 +102,16 @@ export async function refreshAuthSession() {
   try {
     const { data: { session }, error } = await supabase.auth.refreshSession();
     if (error) {
-      // eslint-disable-next-line no-console
       console.error('[useAuth] refresh error:', error);
       return null;
     }
     const u = session?.user ?? null;
     const role = u?.app_metadata?.role ?? u?.user_metadata?.subscriptionStatus;
-    // eslint-disable-next-line no-console
     console.log('[useAuth] Session refreshed, role:', role);
     return u;
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error('[useAuth] refresh exception:', e);
     return null;
   }
 }
+
