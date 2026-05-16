@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import supabase from './supabaseClient';
 
-async function fetchUserProfile(userId: string): Promise<{ is_pro: boolean } | null> {
+async function fetchUserProfile(userId: string): Promise<{ is_pro: boolean; stripe_customer_id?: string | null } | null> {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('is_pro')
+      .select('is_pro, stripe_customer_id')
       .eq('id', userId)
       .single();
 
@@ -21,9 +21,26 @@ async function fetchUserProfile(userId: string): Promise<{ is_pro: boolean } | n
   }
 }
 
+// Global registry to allow manual profile refresh from anywhere
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let refetchCallbacks: Set<(userId: string) => void> = new Set();
+
+export function registerRefetchCallback(callback: (userId: string) => void) {
+  refetchCallbacks.add(callback);
+  return () => refetchCallbacks.delete(callback);
+}
+
+export async function refetchUserProfile(userId: string) {
+  console.log('[useAuth] Manual refetch requested for user:', userId);
+  // Notify all registered components to refetch
+  refetchCallbacks.forEach(cb => cb(userId));
+}
+
 export default function useAuth() {
   const [user, setUser] = useState<Record<string, unknown> | null>(null);
   const [isPro, setIsPro] = useState(false);
+  const [stripeCustomerId, setStripeCustomerId] = useState<string | null>(null);
+  const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -36,24 +53,30 @@ export default function useAuth() {
       setUser(u);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (u && typeof u === 'object' && 'id' in u && typeof (u as any).id === 'string') {
-        // Try to fetch is_pro from profiles table first
+        userIdRef.current = (u as any).id;
+        // Try to fetch is_pro and stripe_customer_id from profiles table first
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const profile = await fetchUserProfile((u as any).id);
         if (mounted) {
           if (profile !== null) {
-            console.log('[useAuth] Session user:', u?.email, 'is_pro from profiles:', profile.is_pro);
+            console.log('[useAuth] Session user:', u?.email, 'is_pro from profiles:', profile.is_pro, 'stripe_customer_id:', profile.stripe_customer_id);
             setIsPro(profile.is_pro);
+            setStripeCustomerId(profile.stripe_customer_id || null);
           } else {
             // Fallback to metadata if profile fetch fails
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const role = (u as any)?.app_metadata?.role ?? (u as any)?.user_metadata?.subscriptionStatus;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            console.log('[useAuth] Session user:', (u as any)?.email, 'role from metadata:', role);
+            const customerId = (u as any)?.user_metadata?.stripeCustomerId;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            console.log('[useAuth] Session user:', (u as any)?.email, 'role from metadata:', role, 'customerId:', customerId);
             setIsPro(role === 'pro');
+            setStripeCustomerId(customerId || null);
           }
         }
       } else {
         setIsPro(false);
+        setStripeCustomerId(null);
       }
     };
 
@@ -67,34 +90,85 @@ export default function useAuth() {
       setUser(u);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (u && typeof u === 'object' && 'id' in u && typeof (u as any).id === 'string') {
-        // Try to fetch is_pro from profiles table first
+        userIdRef.current = (u as any).id;
+        // Try to fetch is_pro and stripe_customer_id from profiles table first
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const profile = await fetchUserProfile((u as any).id);
         if (mounted) {
           if (profile !== null) {
-            console.log('[useAuth] Auth state changed, user:', u?.email, 'is_pro from profiles:', profile.is_pro);
+            console.log('[useAuth] Auth state changed, user:', u?.email, 'is_pro from profiles:', profile.is_pro, 'stripe_customer_id:', profile.stripe_customer_id);
             setIsPro(profile.is_pro);
+            setStripeCustomerId(profile.stripe_customer_id || null);
           } else {
             // Fallback to metadata if profile fetch fails
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const role = (u as any)?.app_metadata?.role ?? (u as any)?.user_metadata?.subscriptionStatus;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            console.log('[useAuth] Auth state changed, user:', (u as any)?.email, 'role from metadata:', role);
+            const customerId = (u as any)?.user_metadata?.stripeCustomerId;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            console.log('[useAuth] Auth state changed, user:', (u as any)?.email, 'role from metadata:', role, 'customerId:', customerId);
             setIsPro(role === 'pro');
+            setStripeCustomerId(customerId || null);
           }
         }
       } else {
         setIsPro(false);
+        setStripeCustomerId(null);
       }
     });
 
+    // Register callback for manual refetch requests
+    const handleRefetch = async (requestedUserId: string) => {
+      if (mounted && userIdRef.current === requestedUserId) {
+        console.log('[useAuth] Handling manual refetch for user:', requestedUserId);
+        const profile = await fetchUserProfile(requestedUserId);
+        if (mounted && profile !== null) {
+          console.log('[useAuth] Profile refetched, is_pro:', profile.is_pro, 'stripe_customer_id:', profile.stripe_customer_id);
+          setIsPro(profile.is_pro);
+          setStripeCustomerId(profile.stripe_customer_id || null);
+        }
+      }
+    };
+
+    const unsubscribe = registerRefetchCallback(handleRefetch);
+
+    // Set up real-time subscription to profiles table for the current user
+    let realtimeUnsubscribe: (() => void) | null = null;
+    if (userIdRef.current) {
+      const userId = userIdRef.current;
+      realtimeUnsubscribe = supabase
+        .channel(`public:profiles:id=eq.${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${userId}`,
+          },
+          (payload) => {
+            console.log('[useAuth] Real-time update received:', payload);
+            if (mounted && payload.new) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const newProfile = payload.new as any;
+              console.log('[useAuth] Updating from real-time: is_pro:', newProfile.is_pro, 'stripe_customer_id:', newProfile.stripe_customer_id);
+              setIsPro(newProfile.is_pro);
+              setStripeCustomerId(newProfile.stripe_customer_id || null);
+            }
+          }
+        )
+        .subscribe();
+    }
+
     return () => {
       mounted = false;
+      unsubscribe();
+      if (realtimeUnsubscribe) realtimeUnsubscribe();
       try { listener?.subscription?.unsubscribe(); } catch { }
     };
   }, []);
 
-  return { user, isPro };
+  return { user, isPro, stripeCustomerId };
 }
 
 // Helper to manually refresh the session (useful if metadata was updated server-side)

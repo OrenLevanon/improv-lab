@@ -87,6 +87,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                       }
                     }
                     await supabase.auth.admin.updateUserById(userRecord.id as string, { user_metadata: updates });
+                    
+                    // Also update profiles table with stripe_customer_id and is_pro flag
+                    const stripeCustomerId = session.customer as string || null;
+                    try {
+                      await supabase
+                        .from('profiles')
+                        .upsert({
+                          id: userRecord.id as string,
+                          stripe_customer_id: stripeCustomerId,
+                          is_pro: true,
+                          updated_at: new Date().toISOString()
+                        })
+                        .eq('id', userRecord.id as string);
+                      console.log('Updated profiles table for user', userRecord.id, 'with stripe_customer_id:', stripeCustomerId);
+                    } catch (e) {
+                      console.error('Error updating profiles table:', e);
+                    }
+                    
                     console.log('Updated/created Supabase user for', email || userRecord.id);
                   } else {
                     console.warn('Could not find or create Supabase user for', email);

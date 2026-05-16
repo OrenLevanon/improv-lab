@@ -326,7 +326,7 @@ const TEXT_TYPE_OPTIONS: { value: TextCategory; label: string }[] = [ { value: '
 function CustomSelect<T extends string | number>({ options, value, onChange }: { options: { value: T; label: string }[], value: T, onChange: (v: T) => void }) { /* (Unchanged) */
   const [isOpen, setIsOpen] = useState(false); const wrapperRef = useRef<HTMLDivElement>(null);
   useEffect(() => { const handleClickOutside = (e: MouseEvent) => { if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setIsOpen(false); }; document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []);
-  return ( <div ref={wrapperRef} style={styles.selectWrapper}> <button style={styles.selectButton} onClick={() => setIsOpen(!isOpen)}> {options.find(opt => opt.value === value)?.label} <span style={{...styles.selectArrow, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'}}>?</span> </button> {isOpen && ( <ul style={styles.selectDropdown}> {options.map(option => ( <li key={String(option.value)} style={styles.selectOption} onClick={() => { onChange(option.value); setIsOpen(false); }}> {option.label} </li> ))} </ul> )} </div> );
+  return ( <div ref={wrapperRef} style={styles.selectWrapper}> <button style={styles.selectButton} onClick={() => setIsOpen(!isOpen)}> {options.find(opt => opt.value === value)?.label} <span style={styles.selectArrow}>{isOpen ? '▼' : '▶'}</span> </button> {isOpen && ( <ul style={styles.selectDropdown}> {options.map(option => ( <li key={String(option.value)} style={styles.selectOption} onClick={() => { onChange(option.value); setIsOpen(false); }}> {option.label} </li> ))} </ul> )} </div> );
 }
 
 // Multi-Select Dropdown (Updated)
@@ -343,12 +343,13 @@ function MultiSelectDropdown<T extends string>({ options, selected, onChange, la
 
   const handleSelectAll = () => { onChange(Object.fromEntries(options.map(opt => [opt.value, !allSelected])) as Record<T, boolean>); };
   useEffect(() => { const handleClickOutside = (e: MouseEvent) => { if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setIsOpen(false); }; document.addEventListener("mousedown", handleClickOutside); return () => document.removeEventListener("mousedown", handleClickOutside); }, []);
-  return ( <div ref={wrapperRef} style={styles.selectWrapper}> <button style={styles.selectButton} onClick={() => setIsOpen(!isOpen)}> {getButtonText()} <span style={{...styles.selectArrow, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'}}>?</span> </button> {isOpen && ( <ul style={styles.selectDropdown}> <li style={styles.selectOption} onClick={handleSelectAll}> <div style={styles.checkbox} data-checked={allSelected}>?</div>Select All </li> {options.map(option => ( <li key={option.value} style={styles.selectOption} onClick={() => onChange({ ...selected, [option.value]: !selected[option.value] })}> <div style={styles.checkbox} data-checked={!!selected[option.value]}>?</div>{option.label} </li> ))} </ul> )} </div> );
+  return ( <div ref={wrapperRef} style={styles.selectWrapper}> <button style={styles.selectButton} onClick={() => setIsOpen(!isOpen)}> {getButtonText()} <span style={styles.selectArrow}>{isOpen ? '▼' : '▶'}</span> </button> {isOpen && ( <ul style={styles.selectDropdown}> <li style={styles.selectOption} onClick={handleSelectAll}> <div style={styles.checkbox} data-checked={allSelected}>{allSelected ? '✓' : ''}</div>Select All </li> {options.map(option => ( <li key={option.value} style={styles.selectOption} onClick={() => onChange({ ...selected, [option.value]: !selected[option.value] })}> <div style={styles.checkbox} data-checked={!!selected[option.value]}>{selected[option.value] ? '✓' : ''}</div>{option.label} </li> ))} </ul> )} </div> );
 }
 
 function AuthButtons() {
   // Use centralized auth hook to get current user + isPro
-  const { user, isPro } = useAuth();
+  const { user, isPro, stripeCustomerId } = useAuth();
+  const [portalLoading, setPortalLoading] = React.useState(false);
   const handleLogin = async () => {
     const redirectTo = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000') + '/';
     try {
@@ -363,8 +364,56 @@ function AuthButtons() {
   const handleLogout = async () => { await supabase.auth.signOut(); };
   const openUpgrade = () => { window.location.href = '/upgrade'; };
   
+  const handleManageSubscription = async () => {
+    if (!stripeCustomerId) {
+      alert('Unable to load subscription info. Please try again.');
+      return;
+    }
+
+    setPortalLoading(true);
+    try {
+      const response = await fetch('/api/create-portal-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId: stripeCustomerId }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to open subscription portal');
+      }
+
+      const { url } = await response.json();
+      window.location.href = url;
+    } catch (error) {
+      console.error('Error opening portal:', error);
+      alert(error instanceof Error ? error.message : 'Failed to open subscription portal');
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+  
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      {/* Show Manage Subscription for Pro users */}
+      {user && isPro && (
+        <button 
+          onClick={handleManageSubscription} 
+          disabled={portalLoading}
+          style={{ 
+            padding: '8px 12px', 
+            borderRadius: 8, 
+            background: '#667eea', 
+            color: '#fff', 
+            border: 'none', 
+            cursor: portalLoading ? 'not-allowed' : 'pointer',
+            opacity: portalLoading ? 0.6 : 1
+          }}
+        >
+          {portalLoading ? 'Loading...' : 'Manage Subscription'}
+        </button>
+      )}
+
       {/* Show Upgrade to Pro for anyone who is NOT Pro (including logged-out users) */}
       {!isPro && (
         <button onClick={openUpgrade} style={{ padding: '8px 12px', borderRadius: 8, background: colors.playGreen, color: '#fff', border: 'none', cursor: 'pointer' }}>Upgrade to Pro</button>
@@ -398,6 +447,8 @@ export default function Home() {
   // === CUSTOM CHORDS STATE ===
   const [customChords, setCustomChords] = useState<string[]>(["", "", "", ""]);
   const [useCustomChords, setUseCustomChords] = useState(false);
+  const [isLooping, setIsLooping] = useState(false);
+  const [tempoOffset, setTempoOffset] = useState<number>(0); // -15 to +15 BPM
   const customChordIndex = useRef(0);
 
   function handleCustomChordChange(idx: number, value: string) {
@@ -488,12 +539,17 @@ export default function Home() {
     const context = contextRef.current;
     if (!context || !masterGainRef.current || !guitarGainRef.current || !bassGainRef.current || !drumsGainRef.current) return;
     stopAllAudio();
+    
+    // Calculate playback rate based on tempo offset (135 BPM is the baseline)
+    const playbackRate = (135 + tempoOffset) / 135;
+    
     // Connect each sound to its gain node
     // Drums
     if (bufferRefs.current["drumgroove_135.wav"]) {
       const src = context.createBufferSource();
       src.buffer = bufferRefs.current["drumgroove_135.wav"];
       src.loop = true;
+      src.playbackRate.value = playbackRate;
       src.connect(drumsGainRef.current);
       src.start();
       currentSources.current.push(src);
@@ -503,6 +559,7 @@ export default function Home() {
       const src = context.createBufferSource();
       src.buffer = bufferRefs.current[chord.audioFile];
       src.loop = true;
+      src.playbackRate.value = playbackRate;
       src.connect(guitarGainRef.current);
       src.start();
       currentSources.current.push(src);
@@ -512,6 +569,7 @@ export default function Home() {
       const src = context.createBufferSource();
       src.buffer = bufferRefs.current[chord.bassFile];
       src.loop = true;
+      src.playbackRate.value = playbackRate;
       src.connect(bassGainRef.current);
       src.start();
       currentSources.current.push(src);
@@ -527,7 +585,7 @@ export default function Home() {
     } catch {
       // ignore
     }
-  }, []);
+  }, [tempoOffset]);
   // Update gain node when masterVolume changes
   useEffect(() => {
     // Update all gain nodes when volumes change
@@ -538,6 +596,12 @@ export default function Home() {
   }, [masterVolume, guitarVolume, bassVolume, drumsVolume]);
   const getRandomFilteredText = useCallback((chord: Chord): string | null => { /* (Unchanged) */ const possibleTexts = availableTextCategories.flatMap(cat => chord.texts[cat] || []); if (possibleTexts.length === 0) return null; return possibleTexts[Math.floor(Math.random() * possibleTexts.length)]; }, [availableTextCategories]);
   const scheduleNextLoop = useCallback((customMode?: boolean) => {
+    // Don't schedule next loop if looping is enabled
+    if (isLooping) return;
+    
+    const currentBPM = 135 + tempoOffset;
+    const beatInterval = 60 / currentBPM;
+    
     if (useCustomChords && customMode && customChords.filter(Boolean).length === 4) {
       const idx = (customChordIndex.current + 1) % 4;
       customChordIndex.current = idx;
@@ -545,7 +609,7 @@ export default function Home() {
       if (!chord) return;
       const text = getRandomFilteredText(chord);
       if (!text) { setNextText("No outlines for selected filters."); return; }
-      const interval = barsPerChord * BEAT_INTERVAL_SEC * 4 * 1000;
+      const interval = barsPerChord * beatInterval * 4 * 1000;
       const previewTimeout = setTimeout(() => { setNextText(`${chord.name}: ${text}`); }, interval - PREVIEW_OFFSET_MS);
       loopTimeout.current = setTimeout(() => {
         clearTimeout(previewTimeout);
@@ -562,10 +626,10 @@ export default function Home() {
       previewText = getRandomFilteredText(upcomingChord); attempts++;
     } while ( previewText && lastPlayedRef.current && upcomingChord.name === lastPlayedRef.current.chordName && previewText === lastPlayedRef.current.text && attempts < 20 );
     if (!previewText) { setNextText("No outlines for selected filters."); return; }
-    const interval = barsPerChord * BEAT_INTERVAL_SEC * 4 * 1000;
+    const interval = barsPerChord * beatInterval * 4 * 1000;
     const previewTimeout = setTimeout(() => { setNextText(`${upcomingChord.name}: ${previewText}`); }, interval - PREVIEW_OFFSET_MS);
     loopTimeout.current = setTimeout(() => { clearTimeout(previewTimeout); playChord(upcomingChord, previewText as string); scheduleNextLoop(false); }, interval);
-  }, [availableChords, availableTextCategories, barsPerChord, getRandomFilteredText, playChord, useCustomChords, customChords]);
+  }, [availableChords, availableTextCategories, barsPerChord, getRandomFilteredText, playChord, useCustomChords, customChords, isLooping, tempoOffset]);
   const startPlayback = () => {
     const context = contextRef.current;
     if (isPlaying || !context) return;
@@ -609,9 +673,9 @@ export default function Home() {
   const [infoOpen, setInfoOpen] = useState<{ how: boolean; about: boolean; updates: boolean; coming: boolean }>({ how: false, about: false, updates: false, coming: false });
 
   // Info texts
-  const howToUseText = `Start by choosing how long each chord should last, which chord types you want to hear, and what kinds of sounds you want to explore using the Outline options.\n\nOnce playback begins, the current chord will be shown on screen, along with a randomly selected outlining option (like a triad or Penta) for you to play over it.\n\nGet ready for the upcoming chord � and its outlining suggestion � shown below under Next.`;
-  const aboutText = `Solo Lab is built to strengthen your improvisation fundamentals. You�ll practice triads, extended triads, pentatonics, and hexatonics as upper structures over different chord types, while playing along with backing tracks recorded by Oren Levanon. It keeps the practice musical, focused, and fun.`;
-  const updatesText = `Solo Lab has some new chords!\nI record everything piece by piece, so it takes time�but I�ll keep adding more regularly.\nOutline chords have been edited and a few mistakes fixed.\nA custom chord section has been added.\nOnly a 4-chord loop option is available for now�but this will be expanded soon.`;
+  const howToUseText = `Start by choosing how long each chord should last, which chord types you want to hear, and what kinds of sounds you want to explore using the Outline options.\n\nOnce playback begins, the current chord will be shown on screen, along with a randomly selected outlining option (like a triad or Penta) for you to play over it.\n\nGet ready for the upcoming chord and its outlining suggestion shown below under Next.`;
+  const aboutText = `Solo Lab is built to strengthen your improvisation fundamentals. You'll practice triads, extended triads, pentatonics, and hexatonics as upper structures over different chord types, while playing along with backing tracks recorded by Oren Levanon. It keeps the practice musical, focused, and fun.`;
+  const updatesText = `Solo Lab has some new chords!\nI record everything piece by piece, so it takes time - but I'll keep adding more regularly.\nOutline chords have been edited and a few mistakes fixed.\nA custom chord section has been added.\nOnly a 4-chord loop option is available for now - but this will be expanded soon.`;
 
   return (
     <>
@@ -636,14 +700,14 @@ export default function Home() {
         }
       `}</style>
       <Head>
-        <title>Solo Lab � Take your solos to the next level</title>
+        <title>SoloLab - Take your solos to the next level</title>
         <meta name="description" content="Solo Lab is a jazz improvisation app by Oren Levanon. Practice with real audio loops, chord suggestions, and interactive tools." />
         <meta name="google-site-verification" content="Dw0POM0c9pK2tUz5qtvH7AVQCARu6LTOj3Tv9m0egPg" />
         <meta name="google-site-verification" content="3z8xpO8BRjBkyfdiQ7hhpSS3KDxCRmcvhJprI76Gcbk" />
       </Head>
       <div style={styles.container}>
         <header style={styles.header}>
-            <h1 style={styles.headerTitle}>Solo Lab</h1>
+            <h1 style={styles.headerTitle}>SoloLab</h1>
             <p style={styles.headerSubtitle}>Take your solos to the next level.</p>
             <div style={{ position: 'absolute', right: 24, top: 18 }}>
               <AuthButtons />
@@ -655,23 +719,23 @@ export default function Home() {
             <h2 style={styles.infoTitle}>Info</h2>
             <div style={styles.accordionGroup}>
               <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, how: !o.how}))}>
-                How To Use <span style={styles.accordionArrow}>{infoOpen.how ? '?' : '?'}</span>
+                How To Use <span style={styles.accordionArrow}>{infoOpen.how ? '▼' : '▶'}</span>
               </button>
               {infoOpen.how && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{howToUseText}</pre></div>}
               <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, about: !o.about}))}>
-                About <span style={styles.accordionArrow}>{infoOpen.about ? '?' : '?'}</span>
+                About <span style={styles.accordionArrow}>{infoOpen.about ? '▼' : '▶'}</span>
               </button>
               {infoOpen.about && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{aboutText}</pre></div>}
               {/* === UPDATES TAB === */}
               <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, updates: !o.updates}))}>
-                Updates <span style={styles.accordionArrow}>{infoOpen.updates ? '?' : '?'}</span>
+                Updates <span style={styles.accordionArrow}>{infoOpen.updates ? '▼' : '▶'}</span>
               </button>
               {infoOpen.updates && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{updatesText}</pre></div>}
               {/* === COMING SOON TAB === */}
               <button style={styles.accordionButton} onClick={() => setInfoOpen(o => ({...o, coming: !o.coming}))}>
-                Support <span style={styles.accordionArrow}>{infoOpen.coming ? '?' : '?'}</span>
+                Support <span style={styles.accordionArrow}>{infoOpen.coming ? '▼' : '▶'}</span>
               </button>
-              {infoOpen.coming && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{`If you have requests, ideas, or run into any issues with Solo Lab, I�d love to hear from you � reach me at orenlevano@gmail.com`}</pre></div>}
+              {infoOpen.coming && <div style={styles.accordionContent}><pre style={styles.infoTextBlock}>{`If you have requests, ideas, or run into any issues with Solo Lab, I'd love to hear from you - reach me at orenlevano@gmail.com`}</pre></div>}
               {/* Join The Development tab removed */}
             </div>
           </div>
@@ -692,6 +756,39 @@ export default function Home() {
                   )}
                 </div>
                 <div style={styles.outlineDisplay}><p style={styles.outlineLabel}>Outline</p><p style={styles.outlineText}>{customText}</p></div>
+                <button
+                  onClick={() => {
+                    if (isLooping) {
+                      // Resume playback by scheduling next loop
+                      setIsLooping(false);
+                      scheduleNextLoop(useCustomChords);
+                    } else {
+                      // Enable looping - clear the scheduled next chord
+                      setIsLooping(true);
+                      if (loopTimeout.current) {
+                        clearTimeout(loopTimeout.current);
+                        loopTimeout.current = null;
+                      }
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px 15px',
+                    marginTop: '12px',
+                    borderRadius: '8px',
+                    border: '2px solid',
+                    borderColor: isLooping ? colors.primaryAccent : '#666',
+                    backgroundColor: isLooping ? 'rgba(0, 188, 212, 0.1)' : 'rgba(255,255,255,0.05)',
+                    color: isLooping ? colors.primaryAccent : colors.text,
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {isLooping ? '✓ Loop This Chord' : 'Loop This Chord'}
+                </button>
+                {/* Tempo slider hidden for now */}
                 <div style={styles.nextUpDisplay}>
                   <p style={styles.nextUpText}>Next: {nextText || "�"}</p>
                   <div style={{ borderTop: '1px solid #444', width: '100%', margin: '10px 0 0 0' }} />
@@ -989,10 +1086,10 @@ const styles: Record<string, React.CSSProperties> = {
   infoText: { margin: 0, color: colors.textMuted },
   selectWrapper: { position: 'relative' },
   selectButton: { width: '100%', padding: '12px 15px', backgroundColor: 'rgba(255,255,255,0.05)', border: `1px solid ${colors.border}`, borderRadius: '8px', color: colors.text, textAlign: 'left', fontSize: '1rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  selectArrow: { transition: 'transform 0.2s ease' },
+  selectArrow: { marginLeft: 'auto', fontSize: '1.1em', color: colors.textMuted, transition: 'all 0.2s ease' },
   selectDropdown: { position: 'absolute', top: '105%', left: 0, right: 0, backgroundColor: '#3c3c44', border: `1px solid ${colors.border}`, borderRadius: '8px', listStyle: 'none', padding: '5px', margin: 0, zIndex: 10, maxHeight: '200px', overflowY: 'auto' },
   selectOption: { padding: '10px 15px', borderRadius: '6px', cursor: 'pointer', transition: 'background-color 0.2s ease', display: 'flex', alignItems: 'center', gap: '10px' },
-  checkbox: { width: '18px', height: '18px', border: `2px solid ${colors.primaryAccent}`, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.darkBg, fontWeight: 'bold', transition: 'all 0.2s ease' },
+  checkbox: { width: '18px', height: '18px', border: `2px solid ${colors.primaryAccent}`, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.primaryAccent, fontWeight: 'bold', fontSize: '0.9rem', transition: 'all 0.2s ease' },
   // === INFO SECTION STYLES ===
   infoCard: {
     flex: '1 1 0',
