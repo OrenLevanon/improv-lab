@@ -133,10 +133,10 @@ export default function useAuth() {
     const unsubscribe = registerRefetchCallback(handleRefetch);
 
     // Set up real-time subscription to profiles table for the current user
-    let realtimeUnsubscribe: (() => void) | null = null;
+    let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
     if (userIdRef.current) {
       const userId = userIdRef.current;
-      realtimeUnsubscribe = supabase
+      realtimeChannel = supabase
         .channel(`public:profiles:id=eq.${userId}`)
         .on(
           'postgres_changes',
@@ -163,7 +163,7 @@ export default function useAuth() {
     return () => {
       mounted = false;
       unsubscribe();
-      if (realtimeUnsubscribe) realtimeUnsubscribe();
+      if (realtimeChannel) realtimeChannel.unsubscribe();
       try { listener?.subscription?.unsubscribe(); } catch { }
     };
   }, []);
