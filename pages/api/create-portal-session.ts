@@ -10,11 +10,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { customerId } = req.body;
 
+  console.log('[Portal] Request received. customerId:', customerId, 'STRIPE_SECRET_KEY set:', !!process.env.STRIPE_SECRET_KEY);
+
   if (!customerId || typeof customerId !== 'string') {
+    console.error('[Portal] Invalid customerId:', customerId);
     return res.status(400).json({ error: 'customerId is required' });
   }
 
   const returnUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  console.log('[Portal] returnUrl:', returnUrl);
 
   try {
     // Create a billing portal session
@@ -23,11 +27,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return_url: returnUrl,
     });
 
+    console.log('[Portal] Session created successfully. URL:', session.url);
     return res.status(200).json({ url: session.url });
   } catch (error) {
-    console.error('Error creating billing portal session:', error);
+    console.error('[Portal] Error creating billing portal session:', error);
+    const errorMsg = error instanceof Error ? error.message : JSON.stringify(error);
     return res.status(500).json({
-      error: error instanceof Error ? error.message : 'Failed to create portal session',
+      error: errorMsg,
+      customerId,
+      apiVersion: '2025-11-17.clover',
     });
   }
 }

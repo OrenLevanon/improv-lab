@@ -87,7 +87,7 @@ export default function useAuth() {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const customerId = (u as any)?.user_metadata?.stripeCustomerId;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            console.log('[useAuth] Session user:', (u as any)?.email, 'role from metadata:', role, 'customerId:', customerId);
+            console.log('[useAuth] Session user:', (u as any)?.email, 'role from metadata:', role, 'customerId from metadata:', customerId);
             setIsPro(role === 'pro');
             setStripeCustomerId(customerId || null);
           }

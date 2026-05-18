@@ -350,6 +350,7 @@ function AuthButtons() {
   // Use centralized auth hook to get current user + isPro
   const { user, isPro, stripeCustomerId } = useAuth();
   const [portalLoading, setPortalLoading] = React.useState(false);
+  const [refreshing, setRefreshing] = React.useState(false);
   const handleLogin = async () => {
     const redirectTo = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000') + '/';
     try {
@@ -364,6 +365,25 @@ function AuthButtons() {
   const handleLogout = async () => { await supabase.auth.signOut(); };
   const openUpgrade = () => { window.location.href = '/upgrade'; };
   
+  const handleRefreshSession = async () => {
+    setRefreshing(true);
+    try {
+      const { data: { session }, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.error('[Auth] Refresh session error:', error);
+        alert('Failed to refresh session');
+      } else {
+        console.log('[Auth] Session refreshed:', session?.user?.email);
+        alert('Session refreshed. Subscription info reloaded.');
+      }
+    } catch (err) {
+      console.error('[Auth] Exception refreshing session:', err);
+      alert('Error refreshing session');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  
   const handleManageSubscription = async () => {
     if (!stripeCustomerId) {
       console.error('[Subscription] stripeCustomerId is missing. User:', user?.email, 'isPro:', isPro);
@@ -372,6 +392,7 @@ function AuthButtons() {
     }
 
     setPortalLoading(true);
+    console.log('[Subscription] Opening portal for customer:', stripeCustomerId);
     try {
       const response = await fetch('/api/create-portal-session', {
         method: 'POST',
@@ -379,15 +400,24 @@ function AuthButtons() {
         body: JSON.stringify({ customerId: stripeCustomerId }),
       });
 
+      console.log('[Subscription] Portal API response status:', response.status);
+      
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to open subscription portal');
+        console.error('[Subscription] Portal API error:', error);
+        throw new Error(error.error || error.details || 'Failed to open subscription portal');
       }
 
-      const { url } = await response.json();
-      window.location.href = url;
+      const data = await response.json();
+      console.log('[Subscription] Portal URL received. Redirecting to:', data.url ? data.url.substring(0, 50) + '...' : 'unknown');
+      
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No URL returned from portal API');
+      }
     } catch (error) {
-      console.error('Error opening portal:', error);
+      console.error('[Subscription] Error opening portal:', error);
       alert(error instanceof Error ? error.message : 'Failed to open subscription portal');
     } finally {
       setPortalLoading(false);
@@ -398,21 +428,41 @@ function AuthButtons() {
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       {/* Show Manage Subscription for Pro users */}
       {user && isPro && (
-        <button 
-          onClick={handleManageSubscription} 
-          disabled={portalLoading}
-          style={{ 
-            padding: '8px 12px', 
-            borderRadius: 8, 
-            background: '#667eea', 
-            color: '#fff', 
-            border: 'none', 
-            cursor: portalLoading ? 'not-allowed' : 'pointer',
-            opacity: portalLoading ? 0.6 : 1
-          }}
-        >
-          {portalLoading ? 'Loading...' : 'Manage Subscription'}
-        </button>
+        <>
+          <button 
+            onClick={handleManageSubscription} 
+            disabled={portalLoading}
+            style={{ 
+              padding: '8px 12px', 
+              borderRadius: 8, 
+              background: '#667eea', 
+              color: '#fff', 
+              border: 'none', 
+              cursor: portalLoading ? 'not-allowed' : 'pointer',
+              opacity: portalLoading ? 0.6 : 1
+            }}
+          >
+            {portalLoading ? 'Loading...' : 'Manage Subscription'}
+          </button>
+          {!stripeCustomerId && (
+            <button 
+              onClick={handleRefreshSession} 
+              disabled={refreshing}
+              style={{ 
+                padding: '8px 12px', 
+                borderRadius: 8, 
+                background: '#FFA500', 
+                color: '#fff', 
+                border: 'none', 
+                cursor: refreshing ? 'not-allowed' : 'pointer',
+                opacity: refreshing ? 0.6 : 1,
+                fontSize: '0.9rem'
+              }}
+            >
+              {refreshing ? 'Refreshing...' : 'Refresh Subscription'}
+            </button>
+          )}
+        </>
       )}
 
       {/* Show Upgrade to Pro for anyone who is NOT Pro (including logged-out users) */}
