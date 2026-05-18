@@ -10,7 +10,25 @@ async function fetchUserProfile(userId: string): Promise<{ is_pro: boolean; stri
       .single();
 
     if (error) {
-      console.error('[useAuth] Error fetching profile:', error);
+      console.error('[useAuth] Error fetching profile:', error.code, error.message);
+      // Try to create a profile if it doesn't exist (likely PGRST116 = no rows found)
+      if (error.code === 'PGRST116') {
+        console.log('[useAuth] No profile found for user', userId, '- creating one');
+        try {
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert({ id: userId, is_pro: false, stripe_customer_id: null })
+            .select()
+            .single();
+          if (!insertError && newProfile) {
+            console.log('[useAuth] Profile created successfully');
+            return newProfile;
+          }
+          if (insertError) console.error('[useAuth] Error creating profile:', insertError.message);
+        } catch (insertException) {
+          console.error('[useAuth] Exception creating profile:', insertException);
+        }
+      }
       return null;
     }
 
@@ -132,38 +150,9 @@ export default function useAuth() {
 
     const unsubscribe = registerRefetchCallback(handleRefetch);
 
-    // Set up real-time subscription to profiles table for the current user
-    let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
-    if (userIdRef.current) {
-      const userId = userIdRef.current;
-      realtimeChannel = supabase
-        .channel(`public:profiles:id=eq.${userId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'profiles',
-            filter: `id=eq.${userId}`,
-          },
-          (payload) => {
-            console.log('[useAuth] Real-time update received:', payload);
-            if (mounted && payload.new) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const newProfile = payload.new as any;
-              console.log('[useAuth] Updating from real-time: is_pro:', newProfile.is_pro, 'stripe_customer_id:', newProfile.stripe_customer_id);
-              setIsPro(newProfile.is_pro);
-              setStripeCustomerId(newProfile.stripe_customer_id || null);
-            }
-          }
-        )
-        .subscribe();
-    }
-
     return () => {
       mounted = false;
       unsubscribe();
-      if (realtimeChannel) realtimeChannel.unsubscribe();
       try { listener?.subscription?.unsubscribe(); } catch { }
     };
   }, []);

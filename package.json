@@ -15,10 +15,11 @@
     "next": "^16.2.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "stripe": "^20.0.0"
+    "stripe": "^20.0.0",
+    "tone": "^15.1.22"
   },
   "optionalDependencies": {
-    "soundtouchjs": "^0.1.2"
+    "soundtouchjs": "^0.1.30"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

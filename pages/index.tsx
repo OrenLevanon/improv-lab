@@ -366,7 +366,8 @@ function AuthButtons() {
   
   const handleManageSubscription = async () => {
     if (!stripeCustomerId) {
-      alert('Unable to load subscription info. Please try again.');
+      console.error('[Subscription] stripeCustomerId is missing. User:', user?.email, 'isPro:', isPro);
+      alert('Subscription ID not loaded yet. Please wait and try again, or logout/login to refresh.');
       return;
     }
 
@@ -448,6 +449,24 @@ export default function Home() {
   const [customChords, setCustomChords] = useState<string[]>(["", "", "", ""]);
   const [useCustomChords, setUseCustomChords] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
+
+  // Handle OAuth callback on initial load
+  useEffect(() => {
+    const handleAuthCallback = async () => {
+      try {
+        // Supabase.auth.getSession automatically exchanges the code for a session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('[Auth] Error getting session after redirect:', error);
+        } else if (session) {
+          console.log('[Auth] Session established after OAuth callback:', session.user.email);
+        }
+      } catch (err) {
+        console.error('[Auth] Exception handling auth callback:', err);
+      }
+    };
+    handleAuthCallback();
+  }, []);
   const [tempoOffset, setTempoOffset] = useState<number>(0); // -15 to +15 BPM
   const customChordIndex = useRef(0);
 
