@@ -10,25 +10,7 @@ async function fetchUserProfile(userId: string): Promise<{ is_pro: boolean; stri
       .single();
 
     if (error) {
-      console.error('[useAuth] Error fetching profile:', error.code, error.message);
-      // Try to create a profile if it doesn't exist (likely PGRST116 = no rows found)
-      if (error.code === 'PGRST116') {
-        console.log('[useAuth] No profile found for user', userId, '- creating one');
-        try {
-          const { data: newProfile, error: insertError } = await supabase
-            .from('profiles')
-            .insert({ id: userId, is_pro: false, stripe_customer_id: null })
-            .select()
-            .single();
-          if (!insertError && newProfile) {
-            console.log('[useAuth] Profile created successfully');
-            return newProfile;
-          }
-          if (insertError) console.error('[useAuth] Error creating profile:', insertError.message);
-        } catch (insertException) {
-          console.error('[useAuth] Exception creating profile:', insertException);
-        }
-      }
+      console.error('[useAuth] Error fetching profile:', error);
       return null;
     }
 
@@ -87,7 +69,7 @@ export default function useAuth() {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const customerId = (u as any)?.user_metadata?.stripeCustomerId;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            console.log('[useAuth] Session user:', (u as any)?.email, 'role from metadata:', role, 'customerId from metadata:', customerId);
+            console.log('[useAuth] Session user:', (u as any)?.email, 'role from metadata:', role, 'customerId:', customerId);
             setIsPro(role === 'pro');
             setStripeCustomerId(customerId || null);
           }

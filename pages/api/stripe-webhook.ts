@@ -27,28 +27,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const session = event.data.object as Stripe.Checkout.Session;
       const email = session.customer_details?.email || (session.customer as string) || null;
       const subscriptionId = session.subscription as string | undefined;
-      const stripeCustomerId = session.customer as string | null;
-      
-      console.log('[Webhook] checkout.session.completed event received');
-      console.log('[Webhook] Email:', email);
-      console.log('[Webhook] SubscriptionId:', subscriptionId);
-      console.log('[Webhook] StripeCustomerId (session.customer):', stripeCustomerId);
-      
       let plan = 'unknown';
       if (subscriptionId) {
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
         const priceId = subscription.items.data[0]?.price?.id;
         if (priceId === process.env.MONTHLY_PRICE_ID) plan = 'monthly';
         if (priceId === process.env.YEARLY_PRICE_ID) plan = 'yearly';
-        console.log('[Webhook] Plan determined:', plan, 'priceId:', priceId);
       }
-      
       if (email || session.metadata?.user_id) {
         // Update or create Supabase user metadata using service role key
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
         if (!supabaseServiceKey) {
-          console.warn('[Webhook] SUPABASE_SERVICE_ROLE_KEY is not set; cannot update user metadata.');
+          console.warn('SUPABASE_SERVICE_ROLE_KEY is not set; cannot update user metadata.');
         } else {
           const supabase = createClient(supabaseUrl, supabaseServiceKey);
           try {
@@ -60,7 +51,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             if (supabaseUserId) {
               const { data, error } = await supabase.auth.admin.getUserById(supabaseUserId);
               if (!error && data) userRecord = data;
-              console.log('[Webhook] Looked up user by ID:', supabaseUserId, 'found:', !!userRecord);
             }
             // If still not found, try to find by email
             if (!userRecord && email) {
@@ -69,20 +59,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 userRecord = list.data.users.find((u: any) => u.email === email) || null;
               }
-              console.log('[Webhook] Looked up user by email:', email, 'found:', !!userRecord);
             }
             // If still not found, create a new Supabase user with the email
             if (!userRecord && email) {
               const createResp = await supabase.auth.admin.createUser({ email, email_confirm: true });
               if (createResp?.data) userRecord = createResp.data;
-              console.log('[Webhook] Created new user for email:', email, 'success:', !!userRecord);
             }
 
                   if (userRecord) {
                     // Update metadata with subscription info and stripe ids + period start/end
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const updates: any = { subscriptionStatus: 'pro', plan };
-                    if (stripeCustomerId) updates.stripeCustomerId = stripeCustomerId;
+                    if (session.customer) updates.stripeCustomerId = session.customer as string;
                     if (subscriptionId) updates.stripeSubscriptionId = subscriptionId;
                     // Add subscription period start/end if available
                     if (subscriptionId) {
@@ -95,50 +83,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         if (psValue) updates.period_start = new Date(psValue * 1000).toISOString();
                         if (peValue) updates.period_end = new Date(peValue * 1000).toISOString();
                       } catch (e) {
-                        console.warn('[Webhook] Could not retrieve subscription period info:', e);
+                        console.warn('Could not retrieve subscription period info:', e);
                       }
                     }
                     await supabase.auth.admin.updateUserById(userRecord.id as string, { user_metadata: updates });
-                    console.log('[Webhook] Updated user metadata:', updates);
                     
                     // Also update profiles table with stripe_customer_id and is_pro flag
-                    if (!stripeCustomerId) {
-                      console.warn('[Webhook] WARNING: stripeCustomerId is null or empty. Cannot update profiles table.');
-                    }
+                    const stripeCustomerId = session.customer as string || null;
                     try {
-                      const { error: upsertError, data: upsertData } = await supabase
+                      await supabase
                         .from('profiles')
                         .upsert({
                           id: userRecord.id as string,
-                          stripe_customer_id: stripeCustomerId || null,
+                          stripe_customer_id: stripeCustomerId,
                           is_pro: true,
                           updated_at: new Date().toISOString()
-                        }, {
-                          onConflict: 'id'
-                        });
-                      
-                      if (upsertError) {
-                        console.error('[Webhook] Error upserting profiles table:', upsertError);
-                      } else {
-                        console.log('[Webhook] Updated profiles table for user', userRecord.id, 'with stripe_customer_id:', stripeCustomerId, 'data:', upsertData);
-                      }
+                        })
+                        .eq('id', userRecord.id as string);
+                      console.log('Updated profiles table for user', userRecord.id, 'with stripe_customer_id:', stripeCustomerId);
                     } catch (e) {
-                      console.error('[Webhook] Exception updating profiles table:', e);
+                      console.error('Error updating profiles table:', e);
                     }
                     
-                    console.log('[Webhook] Successfully processed user', email || userRecord.id);
+                    console.log('Updated/created Supabase user for', email || userRecord.id);
                   } else {
-                    console.warn('[Webhook] Could not find or create Supabase user for', email);
+                    console.warn('Could not find or create Supabase user for', email);
                   }
           } catch (e) {
-            console.error('[Webhook] Error updating/creating supabase user metadata:', e);
+            console.error('Error updating/creating supabase user metadata:', e);
           }
         }
       }
     }
     res.json({ received: true });
   } catch (e) {
-    console.error('[Webhook] Handler error:', e);
+    console.error('Webhook handler error:', e);
     res.status(500).send('Server error');
   }
 }
